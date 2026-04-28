@@ -8,8 +8,6 @@ import time
 from datetime import datetime
 from maps_config import *
 from avatars_config import AVATARS, CHAT_EMOJIS
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
 
 # ========== 全局状态 ==========
 rooms = {}
@@ -1224,11 +1222,10 @@ async def handle_message(room, ws, name, data):
 
 # ========== WebSocket 连接处理 ==========
 async def handler(ws, path):
-        
     name = None
     room = None
     
-    # 直接接收第一条消息，不做任何 HTTP 响应
+    # 直接接收第一条消息
     try:
         raw = await ws.recv()
     except websockets.exceptions.ConnectionClosedOK:
@@ -1239,11 +1236,8 @@ async def handler(ws, path):
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        try:
-            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
-            await ws.close()
-        except:
-            pass
+        # 不是有效的 JSON 消息，直接关闭连接
+        await ws.close()
         return
     
     name = data.get("name", "").strip()
@@ -1412,25 +1406,6 @@ async def handler(ws, path):
                 await broadcast_to_room(room, f"[系统] 房主变更为 {new_owner}")
             
             await broadcast_room_state(room)
-
-# ========== 健康检查 HTTP 服务器（为 Render 部署添加）==========
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/healthz':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-        else:
-            self.send_response(404)
-            self.end_headers()
-    
-    def log_message(self, format, *args):
-        pass  # 禁用日志输出
-
-def start_health_server():
-    httpd = HTTPServer(('0.0.0.0', 8080), HealthHandler)
-    httpd.serve_forever()
     
 async def main():
     print("=" * 50)
