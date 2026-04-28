@@ -1408,28 +1408,54 @@ async def handler(ws, path):
             await broadcast_room_state(room)
     
 async def main():
-    print("=" * 50)
-    print("  🎲 大富翁 WebSocket 服务器启动！")
-    print("  部署环境: Railway")
-    print("=" * 50)
-    
-    # 获取 Railway 分配的端口（默认 8765 或环境变量）
-    port = int(os.environ.get("PORT", 8765))
-    print(f"✅ 服务运行在端口: {port}")
-    
-    # 启动定时清理任务
-    asyncio.create_task(clean_empty_rooms())
-    
-    # 只启动 WebSocket 服务器
-    async with websockets.serve(handler, "0.0.0.0", port):
-        print(f"✅ WebSocket 服务器运行在 ws://0.0.0.0:{port}")
-        print("✅ 等待客户端连接...")
-        print("按 Ctrl+C 停止服务器")
+    try:
+        print("=" * 50)
+        print("  🎲 大富翁 WebSocket 服务器启动！")
+        print("  部署环境: Railway")
+        print("=" * 50)
         
+        # 检查导入的模块
+        print("[DEBUG] 检查 maps_config...")
         try:
-            await asyncio.Future()  # 永久运行
-        except asyncio.CancelledError:
-            print("\n服务器正在关闭...")
+            from maps_config import CHINA_MAP, TOURIST_ROUTE, CHANCE_CARDS, FATE_CARDS, STOCK_CARDS, ALL_MAPS, MAP_START_MONEY
+            print("[DEBUG] maps_config 导入成功")
+            print(f"[DEBUG] CHINA_MAP 长度: {len(CHINA_MAP)}")
+        except Exception as e:
+            print(f"[ERROR] maps_config 导入失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+        
+        print("[DEBUG] 检查 avatars_config...")
+        try:
+            from avatars_config import AVATARS, CHAT_EMOJIS
+            print(f"[DEBUG] AVATARS 长度: {len(AVATARS)}")
+        except Exception as e:
+            print(f"[ERROR] avatars_config 导入失败: {e}")
+            traceback.print_exc()
+            return
+        
+        # 获取 Railway 分配的端口
+        port = int(os.environ.get("PORT", 8765))
+        print(f"✅ 服务运行在端口: {port}")
+        
+        # 启动定时清理任务
+        asyncio.create_task(clean_empty_rooms())
+        
+        # 只启动 WebSocket 服务器
+        async with websockets.serve(handler, "0.0.0.0", port):
+            print(f"✅ WebSocket 服务器运行在 ws://0.0.0.0:{port}")
+            print("✅ 等待客户端连接...")
+            print("按 Ctrl+C 停止服务器")
+            
+            try:
+                await asyncio.Future()
+            except asyncio.CancelledError:
+                print("\n服务器正在关闭...")
+    except Exception as e:
+        print(f"[FATAL] 服务器启动失败: {e}")
+        import traceback
+        traceback.print_exc()
             
 if __name__ == "__main__":
     try:
