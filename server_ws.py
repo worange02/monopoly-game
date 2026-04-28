@@ -1,5 +1,5 @@
 # server_ws.py - 修复房间号回收和释放问题，修复旅游路线逻辑
-
+import os 
 import asyncio
 import websockets
 import json
@@ -1442,7 +1442,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         pass  # 禁用日志输出
 
 def start_health_server():
-    httpd = HTTPServer(('0.0.0.0', 10000), HealthHandler)
+    httpd = HTTPServer(('0.0.0.0', 8080), HealthHandler)
     httpd.serve_forever()
     
 async def main():
@@ -1451,13 +1451,16 @@ async def main():
     
     print("=" * 50)
     print("  🎲 大富翁 WebSocket 服务器启动！")
-    print("  WebSocket 端口: 10000")
+    port = int(os.environ.get("PORT", 10000))
+    print(f"  WebSocket 端口: {port}")
     print("  健康检查端口: 8080")
     print("=" * 50)
+    
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
-    async with websockets.serve(handler, "0.0.0.0", 10000):
-        print("服务器运行在 ws://0.0.0.0:10000")
+    
+    async with websockets.serve(handler, "0.0.0.0", port):
+        print(f"服务器运行在 ws://0.0.0.0:{port}")
         print("按 Ctrl+C 停止服务器")
         try:
             await asyncio.Future()
