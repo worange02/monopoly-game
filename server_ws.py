@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 from maps_config import *
 from avatars_config import AVATARS, CHAT_EMOJIS
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 
 # ========== 全局状态 ==========
 rooms = {}
@@ -1418,21 +1420,38 @@ async def handler(ws, path):
             
             await broadcast_room_state(room)
 
+# ========== 健康检查 HTTP 服务器（为 Render 部署添加）==========
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/healthz':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        pass  # 禁用日志输出
+
+def start_health_server():
+    httpd = HTTPServer(('0.0.0.0', 8080), HealthHandler)
+    httpd.serve_forever()
+    
 async def main():
+    # 启动健康检查 HTTP 服务器（Render 需要）
+    threading.Thread(target=start_health_server, daemon=True).start()
+    
     print("=" * 50)
     print("  🎲 大富翁 WebSocket 服务器启动！")
-    print("  📁 头像请放在 images/ 目录下")
-    print("  🗺️ 地图图片请放在 images/map/ 目录下")
-    print("  😊 表情包请放在 images/chat/ 目录下 (1-19.gif)")
-    print("  🎲 骰子图片请放在 images/dice/ 目录下")
-    print("  💰 初始资金: 50000元")
-    print("  🏆 获胜金额: 50000总资产")
-    print("  🎯 起点奖励: 经过3000元，停留额外3000元(共6000元)")
+    print("  WebSocket 端口: 10000")
+    print("  健康检查端口: 8080")
     print("=" * 50)
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
-    async with websockets.serve(handler, "0.0.0.0", 8765):
-        print("服务器运行在 ws://0.0.0.0:8765")
+    async with websockets.serve(handler, "0.0.0.0", 10000):
+        print("服务器运行在 ws://0.0.0.0:10000")
         print("按 Ctrl+C 停止服务器")
         try:
             await asyncio.Future()
