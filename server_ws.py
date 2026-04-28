@@ -1224,12 +1224,6 @@ async def handle_message(room, ws, name, data):
 
 # ========== WebSocket 连接处理 ==========
 async def handler(ws, path):
-    # 忽略健康检查请求，只处理 WebSocket 请求
-    if path != '/ws':
-        # 如果是健康检查（/healthz），不会走到这里，因为8080端口的独立服务处理了
-        # 但为了保险，如果不是 /ws 路径，直接关闭连接
-        await ws.close()
-        return
         
     name = None
     room = None
