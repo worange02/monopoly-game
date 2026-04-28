@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: monopoly-ws-server
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server_ws.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
