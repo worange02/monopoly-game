@@ -1,0 +1,222 @@
+# maps_config.py - 只保留中国之旅地图
+
+# 地图配置 - 引用图片
+MAP_IMAGES = {
+    "中国之旅": "中国之旅.jpg",
+}
+
+# ========== 中国之旅主地图（63个格子：0-62）==========
+CHINA_MAP = [
+    # 0-10
+    {"id": 0, "name": "起点", "type": "start", "price": 0, "rent": 0, "pass_bonus": 3000},
+    {"id": 1, "name": "台湾", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 2, "name": "福州", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 3, "name": "厦门", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 4, "name": "香港", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 5, "name": "深圳", "type": "property", "price": 4500, "rent": 450, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [450, 900, 1800, 2700, 3600, 7000]},
+    {"id": 6, "name": "命运", "type": "fate", "price": 0, "rent": 0},
+    {"id": 7, "name": "广州", "type": "property", "price": 5000, "rent": 500, "build_cost": 1500, "hotel_cost": 7000,
+     "rents": [500, 1000, 2000, 3000, 4000, 8000]},
+    {"id": 8, "name": "广州铁路局", "type": "railway", "price": 2000, "rent": 2000},
+    {"id": 9, "name": "机会", "type": "chance", "price": 0, "rent": 0},
+    {"id": 10, "name": "珠海", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    # 11-20
+    {"id": 11, "name": "澳门", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 12, "name": "长沙", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 13, "name": "股票分析", "type": "stock", "price": 0, "rent": 0},
+    {"id": 14, "name": "海口", "type": "property", "price": 1500, "rent": 150, "build_cost": 500, "hotel_cost": 2500,
+     "rents": [150, 300, 600, 900, 1200, 3000]},
+    {"id": 15, "name": "三亚", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 16, "name": "旅游出发点", "type": "travel_start", "price": 0, "rent": 0},
+    {"id": 17, "name": "桂林", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 18, "name": "南宁", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 19, "name": "昆明", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 20, "name": "拉萨", "type": "property", "price": 1500, "rent": 150, "build_cost": 500, "hotel_cost": 2500,
+     "rents": [150, 300, 600, 900, 1200, 3000]},
+    # 21-30
+    {"id": 21, "name": "贵阳", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 22, "name": "命运", "type": "fate", "price": 0, "rent": 0},
+    {"id": 23, "name": "重庆", "type": "property", "price": 5000, "rent": 500, "build_cost": 1500, "hotel_cost": 7000,
+     "rents": [500, 1000, 2000, 3000, 4000, 8000]},
+    {"id": 24, "name": "成都铁路局", "type": "railway", "price": 2000, "rent": 2000},
+    {"id": 25, "name": "成都", "type": "property", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 26, "name": "兰州", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 27, "name": "乌鲁木齐", "type": "property", "price": 1500, "rent": 150, "build_cost": 500, "hotel_cost": 2500,
+     "rents": [150, 300, 600, 900, 1200, 3000]},
+    {"id": 28, "name": "西宁", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 29, "name": "税务局", "type": "tax", "price": 0, "rent": 2000},
+    {"id": 30, "name": "呼和浩特", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    # 31-40
+    {"id": 31, "name": "银川", "type": "property", "price": 1500, "rent": 150, "build_cost": 500, "hotel_cost": 2500,
+     "rents": [150, 300, 600, 900, 1200, 3000]},
+    {"id": 32, "name": "免费停车场", "type": "free_parking", "price": 0, "rent": 0},
+    {"id": 33, "name": "西安", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 34, "name": "延安", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 35, "name": "太原", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 36, "name": "大同", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 37, "name": "石家庄", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 38, "name": "命运", "type": "fate", "price": 0, "rent": 0},
+    {"id": 39, "name": "天津", "type": "property", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 40, "name": "北京铁路局", "type": "railway", "price": 2000, "rent": 2000},
+    # 41-50
+    {"id": 41, "name": "机会", "type": "chance", "price": 0, "rent": 0},
+    {"id": 42, "name": "北京", "type": "property", "price": 5000, "rent": 500, "build_cost": 1500, "hotel_cost": 7000,
+     "rents": [500, 1000, 2000, 3000, 4000, 8000]},
+    {"id": 43, "name": "哈尔滨", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 44, "name": "长春", "type": "property", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 45, "name": "股票分析", "type": "stock", "price": 0, "rent": 0},
+    {"id": 46, "name": "沈阳", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 47, "name": "大连", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 48, "name": "济南", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 49, "name": "青岛", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 50, "name": "郑州", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    # 51-62
+    {"id": 51, "name": "洛阳", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 52, "name": "南京", "type": "property", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 53, "name": "苏州", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 54, "name": "机会", "type": "chance", "price": 0, "rent": 0},
+    {"id": 55, "name": "上海铁路局", "type": "railway", "price": 2000, "rent": 2000},
+    {"id": 56, "name": "上海", "type": "property", "price": 5000, "rent": 500, "build_cost": 1500, "hotel_cost": 7000,
+     "rents": [500, 1000, 2000, 3000, 4000, 8000]},
+    {"id": 57, "name": "杭州", "type": "property", "price": 4500, "rent": 450, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [450, 900, 1800, 2700, 3600, 7000]},
+    {"id": 58, "name": "宁波", "type": "property", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 59, "name": "武汉", "type": "property", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 60, "name": "税务局", "type": "tax", "price": 0, "rent": 10000},
+    {"id": 61, "name": "合肥", "type": "property", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 62, "name": "南昌", "type": "property", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+]
+
+# ========== 旅游景点路线 ==========
+TOURIST_ROUTE = [
+    {"id": 100, "name": "桂林山水", "type": "scenic", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 101, "name": "苏州园林", "type": "scenic", "price": 2000, "rent": 200, "build_cost": 600, "hotel_cost": 3000,
+     "rents": [200, 400, 800, 1200, 1600, 3500]},
+    {"id": 102, "name": "西湖", "type": "scenic", "price": 2500, "rent": 250, "build_cost": 700, "hotel_cost": 3500,
+     "rents": [250, 500, 1000, 1500, 2000, 4000]},
+    {"id": 103, "name": "九寨沟", "type": "scenic", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 104, "name": "庐山", "type": "scenic", "price": 3000, "rent": 300, "build_cost": 800, "hotel_cost": 4000,
+     "rents": [300, 600, 1200, 1800, 2400, 4500]},
+    {"id": 105, "name": "三峡大坝", "type": "scenic", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 106, "name": "华山", "type": "scenic", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 107, "name": "长城", "type": "scenic", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 108, "name": "哈尔滨冰雪世界", "type": "scenic", "price": 3500, "rent": 350, "build_cost": 1000, "hotel_cost": 5000,
+     "rents": [350, 700, 1400, 2100, 2800, 5000]},
+    {"id": 109, "name": "黄山", "type": "scenic", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 110, "name": "泰山", "type": "scenic", "price": 4000, "rent": 400, "build_cost": 1200, "hotel_cost": 6000,
+     "rents": [400, 800, 1600, 2400, 3200, 6500]},
+    {"id": 111, "name": "旅游结束点", "type": "travel_end", "price": 0, "rent": 0},
+]
+
+# 旅游路线格子坐标（用于前端显示）
+TOURIST_CELL_POSITIONS = {
+    "100": {"x": 120, "y": 760, "width": 0.7, "height": 0.7},
+    "101": {"x": 184, "y": 695, "width": 0.7, "height": 0.7},
+    "102": {"x": 247, "y": 630, "width": 0.7, "height": 0.7},
+    "103": {"x": 311, "y": 565, "width": 0.7, "height": 0.7},
+    "104": {"x": 375, "y": 500, "width": 0.7, "height": 0.7},
+    "105": {"x": 438, "y": 435, "width": 0.7, "height": 0.7},
+    "106": {"x": 502, "y": 370, "width": 0.7, "height": 0.7},
+    "107": {"x": 565, "y": 305, "width": 0.7, "height": 0.7},
+    "108": {"x": 629, "y": 240, "width": 0.7, "height": 0.7},
+    "109": {"x": 693, "y": 175, "width": 0.7, "height": 0.7},
+    "110": {"x": 756, "y": 110, "width": 0.7, "height": 0.7},
+    "111": {"x": 820, "y": 45, "width": 0.7, "height": 0.7},
+}
+
+# ========== 卡牌配置 ==========
+CHANCE_CARDS = [
+    {"text": "银行发放奖金，获得2000元", "money": 2000},
+    {"text": "缴纳违规罚款1000元给银行", "money": -1000},
+    {"text": "直接前进至起点，领取3000元", "action": "goto_start", "money": 3000},
+    {"text": "立即移动至北京，若已被占有则支付租金", "action": "goto_beijing"},
+    {"text": "获得旅游福利，下一回合免费休息", "action": "free_rest"},
+    {"text": "获得房租补贴，下次支付租金时减半", "action": "rent_half"},
+    {"text": "举办活动，每位玩家支付你500元", "action": "collect_from_all", "money": 500},
+    {"text": "房屋维护，每栋房屋支付200元维修费", "action": "house_maintain", "money": 200},
+    {"text": "税务优惠，下次经过税务局可免税", "action": "tax_free"},
+    {"text": "运气大好，额外前进3步", "action": "move_forward", "steps": 3},
+    {"text": "路线调整，向后退回2步", "action": "move_back", "steps": 2},
+    {"text": "获得银行分红，立即获得1500元", "money": 1500},
+]
+
+FATE_CARDS = [
+    {"text": "中得旅游彩票，获得5000元", "money": 5000},
+    {"text": "遭遇意外损失，扣除现金3000元", "money": -3000},
+    {"text": "继承远方亲戚遗产，获得3000元", "money": 3000},
+    {"text": "景区涨价，你所有地产租金提升20%，持续3回合", "action": "rent_up", "duration": 3, "percent": 20},
+    {"text": "市场淡季，你租金下降20%，持续3回合", "action": "rent_down", "duration": 3, "percent": 20},
+    {"text": "获得政府补贴，立即获得2500元", "money": 2500},
+    {"text": "公益捐赠，向银行支付1500元", "money": -1500},
+    {"text": "获得一块空地奖励，随机获得一块无主地产", "action": "free_property"},
+    {"text": "紧急支出，必须拍卖一处地产获得现金", "action": "auction_property"},
+    {"text": "旅游旺季，本回合过路费翻倍", "action": "toll_double"},
+    {"text": "获得安全保障，下次损失减半", "action": "damage_half"},
+    {"text": "获得投资回报，总资产增加10%", "action": "asset_up", "percent": 10},
+]
+
+STOCK_CARDS = [
+    {"text": "股市全线飘红，所有玩家现金增加20%", "action": "all_money_up", "percent": 20},
+    {"text": "市场小幅震荡，所有玩家现金减少10%", "action": "all_money_down", "percent": 10},
+    {"text": "重仓地产大涨，你租金最高的地产租金翻倍3回合", "action": "top_rent_double", "duration": 3},
+    {"text": "个股波动，你租金最高的地产租金减半3回合", "action": "top_rent_half", "duration": 3},
+    {"text": "股票分红，从银行获得1500元", "money": 1500},
+    {"text": "短期回调，向银行支付800元", "money": -800},
+    {"text": "成功抄底，免费获得一处无主地产", "action": "free_property"},
+    {"text": "策略盈利，从每位玩家收取500元收益", "action": "collect_from_all", "money": 500},
+]
+
+# 地图字典 - 只保留中国之旅
+ALL_MAPS = {
+    "中国之旅": CHINA_MAP,
+}
+
+# 地图初始资金
+MAP_START_MONEY = {
+    "中国之旅": 40000,
+}
+
+WIN_MONEY = 50000  # 获胜所需总资产

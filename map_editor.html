@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗺️ 大富翁地图坐标编辑器</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background: #1a1a2e;
+    color: white;
+    padding: 20px;
+  }
+
+  .container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .map-container {
+    position: relative;
+    background: #0f3460;
+    border-radius: 12px;
+    overflow: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    display: inline-block;
+  }
+
+  #map-image {
+    display: block;
+    cursor: crosshair;
+    user-select: none;
+    max-width: none;
+  }
+
+  .grid-cell {
+    position: absolute;
+    border: 2px solid rgba(255,215,0,0.8);
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: gold;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 black;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.1s;
+  }
+
+  .grid-cell:hover {
+    background: rgba(255,215,0,0.5);
+    border-color: white;
+    z-index: 10;
+  }
+
+  .grid-cell.selected {
+    background: rgba(255,0,0,0.6);
+    border-color: red;
+    z-index: 20;
+  }
+
+  .sidebar {
+    flex: 1;
+    min-width: 350px;
+    background: #16213e;
+    border-radius: 12px;
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .sidebar h2 {
+    margin-bottom: 16px;
+    color: gold;
+  }
+
+  .cell-list {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 5px;
+  }
+
+  .cell-item {
+    background: #0f3460;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .cell-item:hover {
+    background: #e94560;
+  }
+
+  .cell-item.active {
+    background: gold;
+    color: #1a1a2e;
+    font-weight: bold;
+  }
+
+  .cell-item.has-position {
+    border-left: 3px solid #06d6a0;
+  }
+
+  .info-panel {
+    background: #0f3460;
+    padding: 16px;
+    border-radius: 12px;
+    margin-top: 16px;
+  }
+
+  .info-panel label {
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #ccc;
+  }
+
+  .info-panel input {
+    width: 100%;
+    padding: 8px;
+    background: #1a1a2e;
+    border: 1px solid #e94560;
+    border-radius: 8px;
+    color: white;
+    font-family: monospace;
+  }
+
+  button {
+    background: #e94560;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-right: 10px;
+  }
+
+  button:hover {
+    background: #ff6b6b;
+  }
+
+  button.secondary {
+    background: #0f3460;
+    border: 1px solid #e94560;
+  }
+
+  .coord-display {
+    font-family: monospace;
+    font-size: 12px;
+    color: #74b9ff;
+    margin-top: 8px;
+    padding: 8px;
+    background: #1a1a2e;
+    border-radius: 8px;
+  }
+
+  .save-output {
+    background: #1a1a2e;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .progress-bar {
+    background: #0f3460;
+    border-radius: 10px;
+    height: 20px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    background: #06d6a0;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  .tip {
+    background: #e9456022;
+    border-left: 3px solid #e94560;
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-bottom: 15px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="map-container" id="map-container">
+    <img id="map-image" src="./images/map/中国之旅.jpg" alt="中国之旅地图" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22900%22%3E%3Crect width=%22900%22 height=%22900%22 fill=%22%23333%22/%3E%3Ctext x=%22450%22 y=%22450%22 text-anchor=%22middle%22 fill=%22white%22%3E请将图片放在 ./images/map/中国之旅.jpg%3C/text%3E%3C/svg%3E'">
+    <div id="grid-overlay" style="position: absolute; top: 0; left: 0; pointer-events: none;"></div>
+  </div>
+  
+  <div class="sidebar">
+    <h2>🗺️ 格子坐标编辑器</h2>
+    
+    <div class="tip">
+      💡 操作说明：<br>
+      1. 点击地图上的位置（城市名称处）<br>
+      2. 坐标自动填入 → 点击"保存当前位置"<br>
+      3. 支持小数坐标（如 1.5 格宽度）<br>
+      4. 绿色边框表示已设置，金色边框为当前选中<br>
+      5. <strong>地图基准尺寸: 900x900px, 每个格子默认 42x42px</strong>
+    </div>
+    
+    <p>当前选中: <span id="current-id" style="color: gold;">0</span> - <span id="current-name">起点</span></p>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill">0/64</div>
+    </div>
+    
+    <div class="cell-list" id="cell-list"></div>
+    
+    <div class="info-panel">
+      <h3>格子位置设置</h3>
+      <label>格子ID: <input type="number" id="cell-id" min="0" max="63" value="0"></label>
+      <label>格子名称: <input type="text" id="cell-name" readonly></label>
+      <label>左上角X (px): <input type="number" id="pos-x" step="0.1" placeholder="点击图片获取坐标"></label>
+      <label>左上角Y (px): <input type="number" id="pos-y" step="0.1" placeholder="点击图片获取坐标"></label>
+      <label>宽度(格): <input type="number" id="width" value="1" min="0.5" max="4" step="0.1"></label>
+      <label>高度(格): <input type="number" id="height" value="1" min="0.5" max="4" step="0.1"></label>
+      
+      <div class="btn-group">
+        <button onclick="updateCurrentCell()">💾 保存当前位置</button>
+        <button onclick="exportConfig()" class="secondary">📋 导出配置</button>
+        <button onclick="clearAll()" class="secondary">🗑️ 清空所有</button>
+        <button onclick="copyToClipboard()" class="secondary">📄 复制代码</button>
+      </div>
+    </div>
+    
+    <div class="save-output" id="save-output">
+      等待导出配置...
+    </div>
+    
+    <div class="coord-display" id="coord-display">
+      💡 提示：点击地图上的位置，然后点击"保存当前位置"
+    </div>
+  </div>
+</div>
+
+<script>
+// 格子数据
+let CELL_POSITIONS = {};
+let currentCellId = 0;
+
+// 格子名称列表 (0-63 共64个格子)
+const MAP_NAMES = [
+  "起点", "台湾", "福州", "厦门", "香港", "深圳", "命运", "广州", "广州铁路局", "机会",
+  "珠海", "澳门", "长沙", "股票分析", "海口", "三亚", "旅游出发点", "桂林", "南宁", "昆明",
+  "拉萨", "贵阳", "命运", "重庆", "成都铁路局", "成都", "兰州", "乌鲁木齐", "西宁", "税务局",
+  "呼和浩特", "银川", "免费停车场", "西安", "延安", "太原", "大同", "石家庄", "命运", "天津",
+  "北京铁路局", "机会", "北京", "哈尔滨", "长春", "股票分析", "沈阳", "大连", "济南", "青岛",
+  "郑州", "洛阳", "南京", "苏州", "机会", "上海铁路局", "上海", "杭州", "宁波", "武汉", 
+  "税务局", "合肥", "南昌", "终点"
+];
+
+// 特殊格子默认尺寸
+const SPECIAL_CELLS = {
+  0: { width: 2.4, height: 2.4 },
+  16: { width: 2.4, height: 2.4 },
+  32: { width: 2.4, height: 2.4 },
+  63: { width: 2.4, height: 2.4 }
+};
+
+// 基准尺寸
+const BASE_IMAGE_SIZE = 900;
+const GRID_SIZE = 42;
+
+// 初始化加载本地数据
+function initDefaultPositions() {
+  const saved = localStorage.getItem('map_positions_editor');
+  if (saved) {
+    try {
+      CELL_POSITIONS = JSON.parse(saved);
+      console.log('已加载保存的位置数据', Object.keys(CELL_POSITIONS).length, '个格子');
+    } catch(e) {}
+  }
+}
+
+// 更新进度条
+function updateProgress() {
+  const count = Object.keys(CELL_POSITIONS).length;
+  const percent = (count / 64) * 100;
+  const fill = document.getElementById('progress-fill');
+  if (fill) {
+    fill.style.width = percent + '%';
+    fill.textContent = `${count}/64`;
+  }
+}
+
+// 绘制所有格子
+function drawAllCells() {
+  const overlay = document.getElementById('grid-overlay');
+  if (!overlay) return;
+  
+  overlay.innerHTML = '';
+  const img = document.getElementById('map-image');
+  if (!img.complete || img.naturalWidth === 0) {
+    setTimeout(drawAllCells, 100);
+    return;
+  }
+  
+  const rect = img.getBoundingClientRect();
+  const scaleX = rect.width / BASE_IMAGE_SIZE;
+  const scaleY = rect.height / BASE_IMAGE_SIZE;
+  
+  for (const [id, pos] of Object.entries(CELL_POSITIONS)) {
+    const cellDiv = document.createElement('div');
+    cellDiv.className = 'grid-cell';
+    if (parseInt(id) === currentCellId) {
+      cellDiv.classList.add('selected');
+    }
+    
+    const left = pos.x * scaleX;
+    const top = pos.y * scaleY;
+    const width = (pos.width || 1) * GRID_SIZE * scaleX;
+    const height = (pos.height || 1) * GRID_SIZE * scaleY;
+    
+    cellDiv.style.position = 'absolute';
+    cellDiv.style.left = left + 'px';
+    cellDiv.style.top = top + 'px';
+    cellDiv.style.width = Math.max(width, 20) + 'px';
+    cellDiv.style.height = Math.max(height, 20) + 'px';
+    cellDiv.textContent = id;
+    
+    cellDiv.onclick = (e) => {
+      e.stopPropagation();
+      selectCell(parseInt(id));
+    };
+    
+    overlay.appendChild(cellDiv);
+  }
+}
+
+// 选中格子
+function selectCell(cellId) {
+  currentCellId = cellId;
+  document.getElementById('current-id').textContent = cellId;
+  document.getElementById('current-name').textContent = MAP_NAMES[cellId] || '未知';
+  document.getElementById('cell-id').value = cellId;
+  document.getElementById('cell-name').value = MAP_NAMES[cellId] || '未知';
+  
+  const pos = CELL_POSITIONS[cellId];
+  if (pos) {
+    document.getElementById('pos-x').value = pos.x.toFixed(1);
+    document.getElementById('pos-y').value = pos.y.toFixed(1);
+    document.getElementById('width').value = pos.width;
+    document.getElementById('height').value = pos.height;
+  } else {
+    document.getElementById('pos-x').value = '';
+    document.getElementById('pos-y').value = '';
+    const special = SPECIAL_CELLS[cellId];
+    document.getElementById('width').value = special?.width || 1;
+    document.getElementById('height').value = special?.height || 1;
+  }
+  
+  // 更新列表高亮
+  document.querySelectorAll('.cell-item').forEach(el => {
+    el.classList.remove('active');
+    if (parseInt(el.dataset.id) === cellId) {
+      el.classList.add('active');
+    }
+  });
+  
+  drawAllCells();
+}
+
+// 更新当前格子位置
+function updateCurrentCell() {
+  const cellId = parseInt(document.getElementById('cell-id').value);
+  const x = parseFloat(document.getElementById('pos-x').value);
+  const y = parseFloat(document.getElementById('pos-y').value);
+  const width = parseFloat(document.getElementById('width').value);
+  const height = parseFloat(document.getElementById('height').value);
+  
+  if (isNaN(x) || isNaN(y)) {
+    alert('请先点击图片获取坐标');
+    return;
+  }
+  
+  CELL_POSITIONS[cellId] = { x, y, width, height };
+  
+  // 保存到本地
+  localStorage.setItem('map_positions_editor', JSON.stringify(CELL_POSITIONS));
+  
+  selectCell(cellId);
+  renderCellList();
+  updateProgress();
+  drawAllCells();
+  
+  document.getElementById('coord-display').innerHTML = `✅ 格子 ${cellId} (${MAP_NAMES[cellId]}) 已保存: (${x.toFixed(1)}, ${y.toFixed(1)}) 宽${width} 高${height}`;
+  
+  setTimeout(() => {
+    document.getElementById('coord-display').innerHTML = '💡 提示：点击地图上的位置，然后点击"保存当前位置"';
+  }, 3000);
+}
+
+// 渲染格子列表
+function renderCellList() {
+  const container = document.getElementById('cell-list');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  for (let i = 0; i <= 63; i++) {
+    const div = document.createElement('div');
+    div.className = 'cell-item';
+    if (CELL_POSITIONS[i]) div.classList.add('has-position');
+    if (i === currentCellId) div.classList.add('active');
+    div.dataset.id = i;
+    div.innerHTML = `<b>${i}</b><br>${MAP_NAMES[i]?.substring(0, 4) || '?'}`;
+    div.onclick = () => selectCell(i);
+    container.appendChild(div);
+  }
+}
+
+// 导出配置代码
+function exportConfig() {
+  let code = '// ========== 格子坐标配置（基于900x900地图）==========\n';
+  code += 'let CELL_POSITIONS = {\n';
+  
+  const sortedIds = Object.keys(CELL_POSITIONS).sort((a, b) => parseInt(a) - parseInt(b));
+  for (const id of sortedIds) {
+    const pos = CELL_POSITIONS[id];
+    code += `  ${id}: { x: ${pos.x.toFixed(1)}, y: ${pos.y.toFixed(1)}, width: ${pos.width}, height: ${pos.height } },\n`;
+  }
+  code += '};\n\n';
+  code += '// 导出时间: ' + new Date().toLocaleString() + '\n';
+  code += '// 已设置 ' + Object.keys(CELL_POSITIONS).length + '/64 个格子\n';
+  code += '// 注意：将此配置替换到 index.html 中的 CELL_POSITIONS 变量';
+  
+  document.getElementById('save-output').innerHTML = code;
+  
+  return code;
+}
+
+// 复制到剪贴板
+function copyToClipboard() {
+  const code = exportConfig();
+  navigator.clipboard.writeText(code).then(() => {
+    alert('✅ 配置代码已复制到剪贴板！\n\n可以粘贴到 index.html 的 CELL_POSITIONS 中');
+  }).catch(() => {
+    alert('复制失败，请手动复制');
+  });
+}
+
+// 清空所有
+function clearAll() {
+  if (confirm('确定清空所有格子位置吗？')) {
+    CELL_POSITIONS = {};
+    localStorage.removeItem('map_positions_editor');
+    renderCellList();
+    drawAllCells();
+    updateProgress();
+    document.getElementById('save-output').innerHTML = '已清空所有格子位置';
+    alert('已清空');
+  }
+}
+
+// 图片点击获取坐标
+function initMapClick() {
+  const img = document.getElementById('map-image');
+  const mapContainer = document.getElementById('map-container');
+  
+  img.onload = () => {
+    console.log('图片加载完成', img.naturalWidth, 'x', img.naturalHeight);
+    drawAllCells();
+  };
+  
+  // 创建点击层
+  const clickLayer = document.createElement('div');
+  clickLayer.style.position = 'absolute';
+  clickLayer.style.top = '0';
+  clickLayer.style.left = '0';
+  clickLayer.style.width = '100%';
+  clickLayer.style.height = '100%';
+  clickLayer.style.cursor = 'crosshair';
+  clickLayer.style.zIndex = '100';
+  clickLayer.style.backgroundColor = 'transparent';
+  
+  mapContainer.style.position = 'relative';
+  mapContainer.appendChild(clickLayer);
+  
+  clickLayer.onclick = (e) => {
+    const rect = img.getBoundingClientRect();
+    if (rect.width === 0) return;
+    
+    const scaleX = BASE_IMAGE_SIZE / rect.width;
+    const scaleY = BASE_IMAGE_SIZE / rect.height;
+    
+    let clickX = (e.clientX - rect.left) * scaleX;
+    let clickY = (e.clientY - rect.top) * scaleY;
+    
+    // 边界限制
+    clickX = Math.max(0, Math.min(clickX, BASE_IMAGE_SIZE));
+    clickY = Math.max(0, Math.min(clickY, BASE_IMAGE_SIZE));
+    
+    // 计算格子坐标（假设每个格子42px）
+    const gridRow = Math.floor(clickY / GRID_SIZE);
+    const gridCol = Math.floor(clickX / GRID_SIZE);
+    
+    document.getElementById('pos-x').value = clickX.toFixed(1);
+    document.getElementById('pos-y').value = clickY.toFixed(1);
+    document.getElementById('coord-display').innerHTML = `📍 点击位置: (${clickX.toFixed(1)}, ${clickY.toFixed(1)}) → 格子坐标: 行${gridRow}, 列${gridCol}`;
+  };
+}
+
+// 添加缩放功能
+function setupZoom() {
+  const img = document.getElementById('map-image');
+  const container = document.getElementById('map-container');
+  let scale = 1;
+  
+  // 鼠标滚轮缩放
+  container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    scale = Math.min(3, Math.max(0.5, scale + delta));
+    img.style.transform = `scale(${scale})`;
+    img.style.transformOrigin = 'top left';
+    
+    // 重新绘制格子
+    setTimeout(() => drawAllCells(), 10);
+  });
+}
+
+// 初始化
+function init() {
+  initDefaultPositions();
+  renderCellList();
+  updateProgress();
+  initMapClick();
+  setupZoom();
+}
+
+init();
+
+// 暴露全局函数
+window.drawAllCells = drawAllCells;
+window.selectCell = selectCell;
+window.updateCurrentCell = updateCurrentCell;
+window.exportConfig = exportConfig;
+window.clearAll = clearAll;
+window.copyToClipboard = copyToClipboard;
+</script>
+</body>
+</html>

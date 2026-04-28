@@ -1,0 +1,32 @@
+{
+  "map": [
+    {"id": 0,  "name": "起点",     "type": "start",    "price": 0,   "rent": 0},
+    {"id": 1,  "name": "阳光大道", "type": "property", "price": 100, "rent": 20},
+    {"id": 2,  "name": "机会",     "type": "chance",   "price": 0,   "rent": 0},
+    {"id": 3,  "name": "朝阳路",   "type": "property", "price": 150, "rent": 30},
+    {"id": 4,  "name": "税务局",   "type": "tax",      "price": 0,   "rent": 50},
+    {"id": 5,  "name": "火车站",   "type": "station",  "price": 200, "rent": 40},
+    {"id": 6,  "name": "长安街",   "type": "property", "price": 180, "rent": 35},
+    {"id": 7,  "name": "机会",     "type": "chance",   "price": 0,   "rent": 0},
+    {"id": 8,  "name": "建国路",   "type": "property", "price": 160, "rent": 32},
+    {"id": 9,  "name": "监狱",     "type": "jail",     "price": 0,   "rent": 0},
+    {"id": 10, "name": "复兴路",   "type": "property", "price": 220, "rent": 44},
+    {"id": 11, "name": "机会",     "type": "chance",   "price": 0,   "rent": 0},
+    {"id": 12, "name": "中关村",   "type": "property", "price": 240, "rent": 48},
+    {"id": 13, "name": "税务局",   "type": "tax",      "price": 0,   "rent": 50},
+    {"id": 14, "name": "南京路",   "type": "property", "price": 260, "rent": 52},
+    {"id": 15, "name": "火车站",   "type": "station",  "price": 200, "rent": 40},
+    {"id": 16, "name": "外滩",     "type": "property", "price": 300, "rent": 60},
+    {"id": 17, "name": "机会",     "type": "chance",   "price": 0,   "rent": 0},
+    {"id": 18, "name": "淮海路",   "type": "property", "price": 320, "rent": 64},
+    {"id": 19, "name": "陆家嘴",   "type": "property", "price": 400, "rent": 80}
+  ],
+  "chance_cards": [
+    {"text": "运气不错！获得奖金100元",  "money": 100},
+    {"text": "缴纳维修费，支出80元",     "money": -80},
+    {"text": "股票大涨！获得200元",      "money": 200},
+    {"text": "罚款50元",                "money": -50},
+    {"text": "中彩票！获得150元",        "money": 150},
+    {"text": "交通违章，罚款60元",       "money": -60}
+  ]
+}

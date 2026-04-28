@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎲 大富翁 · 多人联机版 · 中国之旅</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    --bg-dark: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-surface: #0f3460;
+    --accent: #e94560;
+    --accent-hover: #ff6b6b;
+    --gold: #ffd700;
+    --green: #06d6a0;
+    --purple: #c77dff;
+    --text: #ffffff;
+    --text-muted: #a7a9be;
+    --border: #ffffff20;
+  }
+
+  body {
+    font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 登录界面 */
+  .login-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0e17 100%);
+    z-index: 200;
+    backdrop-filter: blur(10px);
+  }
+
+  .login-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 40px;
+    text-align: center;
+    width: 550px;
+    max-width: 90%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .login-box .logo {
+    font-size: 72px;
+    margin-bottom: 8px;
+  }
+
+  .login-box h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+
+  .login-box p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+
+  .room-input-area {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .room-input-area input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px;
+    outline: none;
+    text-align: center;
+  }
+
+  .room-input-area input:focus {
+    border-color: var(--accent);
+  }
+
+  .room-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .room-buttons button {
+    flex: 1;
+    padding: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .room-buttons button:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .room-buttons button:first-child {
+    background: var(--green);
+    color: #1a1a2e;
+  }
+
+  .login-box input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 20px;
+  }
+
+  .login-box input:focus {
+    border-color: var(--accent);
+  }
+
+  .avatar-section {
+    margin-bottom: 20px;
+  }
+
+  .avatar-section label {
+    display: block;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .avatar-list {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    padding: 8px;
+  }
+
+  .avatar-option {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background: var(--bg-dark);
+    overflow: hidden;
+  }
+
+  .avatar-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-option.selected {
+    border-color: var(--gold);
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255,215,0,0.5);
+  }
+
+  .custom-avatar-area {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+  }
+
+  .custom-avatar-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+
+  .custom-avatar-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  .custom-avatar-preview {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--bg-dark);
+    border-radius: 16px;
+  }
+
+  .custom-avatar-preview .preview-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+  }
+
+  .custom-avatar-preview .preview-info {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .custom-avatar-preview .remove-custom {
+    background: var(--accent);
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    color: white;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .file-input-hidden {
+    display: none;
+  }
+
+  .login-box button.join-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+
+  .login-box button.join-btn:hover {
+    transform: translateY(-2px);
+    background: var(--accent-hover);
+    box-shadow: 0 8px 25px rgba(233,69,96,0.4);
+  }
+
+  /* 顶部栏 */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar .title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--gold);
+  }
+
+  .topbar .room-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-dark);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  .topbar .status {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* 游戏主界面 */
+  .game-screen {
+    display: none;
+  }
+
+  .game-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    gap: 16px;
+    padding: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 1200px) {
+    .game-layout {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+
+  /* 面板通用样式 */
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-content {
+    padding: 16px;
+  }
+
+  /* 玩家列表 */
+  .player-list {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .player-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-dark);
+    border-radius: 16px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .player-card.active {
+    border: 2px solid var(--gold);
+    background: rgba(255,215,0,0.1);
+  }
+
+  .player-card.bankrupt {
+    opacity: 0.5;
+  }
+
+  .player-card.disconnected {
+    opacity: 0.4;
+    filter: grayscale(0.3);
+  }
+
+  .player-auto-tag {
+    background: #3498db;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+  }
+
+  .player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-surface);
+    overflow: hidden;
+  }
+
+  .player-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .player-info {
+    flex: 1;
+  }
+
+  .player-name {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .player-money {
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  .player-props {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .player-total {
+    font-size: 11px;
+    color: var(--gold);
+  }
+
+  .kick-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    color: white;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .kick-btn:hover {
+    background: var(--accent-hover);
+    transform: scale(1.05);
+  }
+
+  /* 棋盘容器 */
+  .board-container {
+    position: relative;
+    width: 100%;
+    background: #0a0a1a;
+    border-radius: 16px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #board {
+    position: relative;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* 骰子区域 - 移动端适配 */
+  .dice-area {
+    position: absolute;
+    bottom: 20%;
+    right: 25%;
+    background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 8px 12px;
+    text-align: center;
+    z-index: 30;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 70px;
+  }
+
+  .dice-area:hover {
+    transform: scale(1.05);
+  }
+
+  #dice-icon {
+    width: clamp(32px, 8vw, 48px);
+    height: clamp(32px, 8vw, 48px);
+  }
+
+  #dice-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  #dice-number {
+    font-size: clamp(10px, 3vw, 12px);
+    color: var(--gold);
+    margin-top: 5px;
+    white-space: nowrap;
+  }
+
+  /* 棋子 - 动态缩放 */
+  .pawn {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 20;
+    background-size: cover;
+    background-position: center;
+    transition: left 0.12s linear, top 0.12s linear, width 0.1s ease, height 0.1s ease;
+    overflow: hidden;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    max-width: 20px;
+    max-height: 20px;
+  }
+
+  .pawn.active-turn {
+    animation: pawnPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 0 3px rgba(255,215,0,0.8), 0 0 0 8px rgba(255,215,0,0.3);
+  }
+
+  @keyframes pawnPulse {
+    0%, 100% { 
+      box-shadow: 0 0 0 3px rgba(255,215,0,0.8), 0 0 0 8px rgba(255,215,0,0.3);
+    }
+    50% { 
+      box-shadow: 0 0 0 5px rgba(255,215,0,1), 0 0 0 12px rgba(255,215,0,0.5);
+    }
+  }
+
+  .pawn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  /* 房子/旅馆标记样式 */
+  .building-marker {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    z-index: 15;
+    pointer-events: none;
+  }
+
+  /* 按钮区域 */
+  .btn-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .btn {
+    padding: 12px;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn:active {
+    transform: scale(0.96);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-roll { background: var(--accent); color: white; }
+  .btn-buy { background: var(--green); color: #1a1a2e; }
+  .btn-upgrade { background: var(--purple); color: white; }
+  .btn-skip { background: var(--bg-surface); color: var(--text-muted); }
+  .btn-start { background: var(--gold); color: #1a1a2e; grid-column: span 2; }
+  .btn-status { background: var(--bg-surface); color: white; }
+  .btn-auto { background: #3498db; color: white; }
+  .btn-map { background: #3498db; color: white; border: none; padding: 4px 12px; border-radius: 12px; cursor: pointer; font-size: 12px; }
+
+  /* 聊天区域 */
+  .chat-container {
+    margin-top: 16px;
+  }
+
+  .chat-messages {
+    height: 200px;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--bg-dark);
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .chat-message {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chat-message .name {
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .chat-message .time {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-left: 8px;
+  }
+
+  .chat-message .emoji-img {
+    width: 32px;
+    height: 32px;
+    vertical-align: middle;
+    margin-top: 4px;
+  }
+
+  .chat-input-area {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .chat-input {
+    flex: 1;
+    padding: 10px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .chat-send {
+    padding: 10px 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+  }
+
+  .emoji-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 8px;
+    background: var(--bg-dark);
+    border-radius: 12px;
+    margin-top: 8px;
+  }
+
+  .emoji-item {
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: transform 0.1s;
+  }
+
+  .emoji-item:hover {
+    transform: scale(1.1);
+  }
+
+  .emoji-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  /* 日志 */
+  .log-box {
+    height: 280px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .log-line {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-system { color: #74b9ff; font-weight: 700; }
+  .log-move { color: var(--green); }
+  .log-buy { color: var(--purple); }
+  .log-rent { color: #fd79a8; }
+  .log-chance { color: var(--gold); }
+  .log-tax { color: var(--accent); }
+  .log-end { color: var(--gold); font-weight: 900; }
+  .log-dice { color: #00cec9; }
+
+  /* 弹窗 */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+  }
+
+  .modal-box {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 28px;
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+  }
+
+  .modal-icon { font-size: 48px; margin-bottom: 12px; }
+  .modal-title { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+  .modal-msg { color: var(--text-muted); margin-bottom: 24px; white-space: pre-line; }
+  .modal-buttons { display: flex; gap: 12px; }
+  .modal-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .modal-btn-yes { background: var(--accent); color: white; }
+  .modal-btn-no { background: var(--bg-surface); color: var(--text-muted); }
+
+  /* 地图选择弹窗 */
+  .map-select-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+  }
+
+  .map-select-box {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 28px;
+    text-align: center;
+    max-width: 450px;
+    width: 90%;
+  }
+
+  .map-options {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .map-option {
+    padding: 12px;
+    background: var(--bg-dark);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    width: 100px;
+  }
+
+  .map-option:hover {
+    background: var(--accent);
+    transform: scale(1.05);
+  }
+
+  .map-option.selected {
+    border: 2px solid var(--gold);
+    background: rgba(255,215,0,0.2);
+  }
+
+  .map-option img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+  .room-code {
+    background: var(--accent);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .btn-exit {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-exit:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  .spectator-badge {
+    background: #3498db;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="logo">🎲</div>
+    <h1>大 富 翁</h1>
+    <p>中国之旅 · 多人联机版 · 初始资金40000元</p>
+    
+    <div class="room-input-area">
+      <input id="room-input" type="text" placeholder="输入房间号（留空则创建新房间）" maxlength="10">
+    </div>
+    <div class="room-buttons">
+      <button onclick="createRoom()">✨ 创建房间</button>
+      <button onclick="joinRoom()">🚪 加入房间</button>
+    </div>
+    
+    <input id="name-input" type="text" placeholder="输入你的名字" maxlength="10">
+    
+    <div class="avatar-section">
+      <label>🎭 选择你的角色</label>
+      <div class="avatar-list" id="avatar-list"></div>
+      
+      <div class="custom-avatar-area">
+        <button class="custom-avatar-btn" onclick="document.getElementById('custom-avatar-file').click()">
+          📷 自定义上传头像
+        </button>
+        <input type="file" id="custom-avatar-file" class="file-input-hidden" accept="image/jpeg,image/png,image/gif" onchange="handleCustomAvatarUpload(this)">
+        <div id="custom-avatar-preview" style="display: none;" class="custom-avatar-preview">
+          <img id="custom-preview-img" class="preview-img" src="">
+          <span class="preview-info">自定义头像</span>
+          <button class="remove-custom" onclick="clearCustomAvatar()">清除</button>
+        </div>
+      </div>
+    </div>
+    
+    <button class="join-btn" onclick="enterGame()">🎮 进入游戏</button>
+  </div>
+</div>
+
+<div id="topbar" class="topbar" style="display:none">
+  <div class="title">🎲 大富翁 · <span id="title-map-name">中国之旅</span></div>
+  <div class="room-info" id="room-info">房间号: ---</div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <div class="status" id="top-status">连接中...</div>
+    <button class="btn-exit" onclick="exitRoom()">🚪 退出房间</button>
+  </div>
+</div>
+
+<div id="game-screen" class="game-screen">
+  <div class="game-layout">
+    <div>
+      <div class="panel">
+        <div class="panel-header">👥 玩家资产 <span id="player-count"></span>
+          <button id="manage-players-btn" class="btn-map" style="display:none;" onclick="showPlayerManage()">👥 管理玩家</button>
+        </div>
+        <div class="panel-content">
+          <div class="player-list" id="player-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span>🗺️ 游戏棋盘 · <span id="map-name">中国之旅</span></span>
+          <button class="btn-map" onclick="showMapSelect()">🗺️ 换地图</button>
+        </div>
+        <div class="panel-content">
+          <div class="board-container">
+            <div id="board">
+              <div class="dice-area" id="dice-area">
+                <div id="dice-icon">🎲</div>
+                <div id="dice-number">等待掷骰</div>
+              </div>
+            </div>
+          </div>
+          <div class="btn-area">
+            <button class="btn btn-roll" id="btn-roll" onclick="doAction('roll')" disabled>🎲 掷骰子</button>
+            <button class="btn btn-status" id="btn-status" onclick="doAction('status')">📊 状态</button>
+            <button class="btn btn-auto" id="btn-auto" onclick="toggleAuto()">🤖 托管</button>
+            <button class="btn btn-start" id="btn-start" onclick="doAction('start')">▶ 开始游戏</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-header">📋 游戏日志</div>
+        <div class="panel-content">
+          <div class="log-box" id="log-box"></div>
+        </div>
+      </div>
+      <div class="panel chat-container">
+        <div class="panel-header">💬 实时聊天 😊</div>
+        <div class="panel-content">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chat-input" placeholder="输入消息..." onkeypress="handleChatKeypress(event)">
+            <button class="chat-send" onclick="sendChat()">发送</button>
+          </div>
+          <div class="emoji-panel" id="emoji-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 玩家管理弹窗 -->
+<div id="player-manage-overlay" class="modal-overlay">
+  <div class="modal-box" style="max-width: 400px;">
+    <div class="modal-icon">👥</div>
+    <div class="modal-title">玩家管理</div>
+    <div id="player-manage-list" style="margin: 20px 0; max-height: 300px; overflow-y: auto;"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-no" onclick="closePlayerManage()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">🏠</div>
+    <div class="modal-title" id="modal-title">是否购买？</div>
+    <div class="modal-msg" id="modal-msg">确认操作</div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-yes" id="modal-yes">确认</button>
+      <button class="modal-btn modal-btn-no" id="modal-no">取消/跳过</button>
+    </div>
+  </div>
+</div>
+
+<div id="card-modal-overlay" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" id="card-modal-icon">🎴</div>
+    <div class="modal-title" id="card-modal-title">机会卡</div>
+    <div class="modal-msg" id="card-modal-msg">卡牌内容</div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-yes" id="card-modal-yes">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="map-select-overlay" class="map-select-overlay">
+  <div class="map-select-box">
+    <div class="modal-icon">🗺️</div>
+    <div class="modal-title">选择地图</div>
+    <div class="map-options" id="map-options"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-no" onclick="closeMapSelect()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 配置 ==========
+const WS_URL = "wss://eb29b185-e47f-47f4-8eed-43975a5e0ccd.cfargotunnel.com";
+
+// 默认头像列表（只有小兔和小狗）
+const DEFAULT_AVATARS = [
+  { id: "xiaotu", name: "小兔", file: "小兔.jpg", emoji: "🐰" },
+  { id: "xiaogou", name: "小狗", file: "小狗.jpg", emoji: "🐶" },
+];
+
+let ws, myName, myAvatar = "xiaotu", myCustomAvatar = null, roomId = null, isOwner = false;
+let gameState = null;
+let playerColorMap = {};
+let mySpectator = false;
+let diceRollInterval = null;
+let currentMapImage = "中国之旅";
+let isMovingPawn = false;
+let pendingMoveSteps = null;
+let myAutoTurn = false;
+
+// 玩家颜色
+const PLAYER_COLORS = ["#FF4757", "#1E90FF", "#2ED573", "#FFA502", "#A29BFE", "#FF6B81", "#70A1FF", "#7F8C8D"];
+
+// 骰子GIF路径
+const DICE_GIFS = {
+  1: "./images/dice/1.gif",
+  2: "./images/dice/2.gif",
+  3: "./images/dice/3.gif",
+  4: "./images/dice/4.gif",
+  5: "./images/dice/5.gif",
+  6: "./images/dice/6.gif"
+};
+
+// ========== 格子坐标配置（基于900x900地图）==========
+let CELL_POSITIONS = {
+  0: { x: 803.6, y: 800.0, width: 1.6, height: 1.9 },
+  1: { x: 751.6, y: 833.2, width: 0.6, height: 1.1 },
+  2: { x: 708.2, y: 833.2, width: 0.6, height: 1.1 },
+  3: { x: 661.8, y: 833.2, width: 0.6, height: 1.1 },
+  4: { x: 616.8, y: 833.2, width: 0.6, height: 1.1 },
+  5: { x: 571.8, y: 833.2, width: 0.6, height: 1.1 },
+  6: { x: 527.5, y: 800.0, width: 0.6, height: 1.9 },
+  7: { x: 482.0, y: 833.2, width: 0.6, height: 1.1 },
+  8: { x: 436.6, y: 800.0, width: 0.6, height: 1.9 },
+  9: { x: 391.6, y: 800.0, width: 0.6, height: 1.9 },
+  10: { x: 346.6, y: 833.5, width: 0.6, height: 1.1 },
+  11: { x: 301.6, y: 833.2, width: 0.6, height: 1.1 },
+  12: { x: 256.6, y: 833.2, width: 0.6, height: 1.1 },
+  13: { x: 211.6, y: 800.0, width: 0.6, height: 1.9 },
+  14: { x: 166.6, y: 833.2, width: 0.6, height: 1.1 },
+  15: { x: 121.6, y: 833.2, width: 0.6, height: 1.1 },
+  16: { x: 31.6, y: 800.0, width: 1.6, height: 1.9 },
+  17: { x: 22.0, y: 754.0, width: 1.1, height: 0.6 },
+  18: { x: 22.0, y: 709.0, width: 1.1, height: 0.6 },
+  19: { x: 22.0, y: 664.0, width: 1.1, height: 0.6 },
+  20: { x: 22.0, y: 619.0, width: 1.1, height: 0.6 },
+  21: { x: 22.0, y: 574.0, width: 1.1, height: 0.6 },
+  22: { x: 22.0, y: 527.0, width: 1.9, height: 0.6 },
+  23: { x: 22.0, y: 482.0, width: 1.1, height: 0.6 },
+  24: { x: 22.0, y: 437.0, width: 1.9, height: 0.6 },
+  25: { x: 22.0, y: 392.0, width: 1.1, height: 0.6 },
+  26: { x: 22.0, y: 345.0, width: 1.1, height: 0.6 },
+  27: { x: 22.0, y: 300.0, width: 1.1, height: 0.6 },
+  28: { x: 22.0, y: 255.0, width: 1.1, height: 0.6 },
+  29: { x: 22.0, y: 210.0, width: 1.9, height: 0.6 },
+  30: { x: 22.0, y: 162.0, width: 1.1, height: 0.6 },
+  31: { x: 22.0, y: 117.0, width: 1.1, height: 0.6 },
+  32: { x: 22.0, y: 24.0, width: 1.9, height: 1.6 },
+  33: { x: 123.0, y: 17.0, width: 0.6, height: 1.1 },
+  34: { x: 168.0, y: 17.0, width: 0.6, height: 1.1 },
+  35: { x: 213.0, y: 17.0, width: 0.6, height: 1.1 },
+  36: { x: 258.0, y: 17.0, width: 0.6, height: 1.1 },
+  37: { x: 303.0, y: 17.0, width: 0.6, height: 1.1 },
+  38: { x: 348.0, y: 17.0, width: 0.6, height: 1.9 },
+  39: { x: 393.0, y: 17.0, width: 0.6, height: 1.1 },
+  40: { x: 437.0, y: 17.0, width: 0.6, height: 1.9 },
+  41: { x: 482.0, y: 17.0, width: 0.6, height: 1.9 },
+  42: { x: 527.0, y: 17.0, width: 0.6, height: 1.1 },
+  43: { x: 572.0, y: 17.0, width: 0.6, height: 1.1 },
+  44: { x: 617.0, y: 17.0, width: 0.6, height: 1.1 },
+  45: { x: 662.0, y: 17.0, width: 0.6, height: 1.9 },
+  46: { x: 707.0, y: 17.0, width: 0.6, height: 1.1 },
+  47: { x: 752.0, y: 17.0, width: 0.6, height: 1.1 },
+  48: { x: 830.0, y: 117.0, width: 1.1, height: 0.6 },
+  49: { x: 830.0, y: 162.0, width: 1.1, height: 0.6 },
+  50: { x: 830.0, y: 207.0, width: 1.1, height: 0.6 },
+  51: { x: 830.0, y: 252.0, width: 1.1, height: 0.6 },
+  52: { x: 830.0, y: 297.0, width: 1.1, height: 0.6 },
+  53: { x: 830.0, y: 342.0, width: 1.1, height: 0.6 },
+  54: { x: 798.0, y: 390.0, width: 1.9, height: 0.6 },
+  55: { x: 798.0, y: 435.0, width: 1.9, height: 0.6 },
+  56: { x: 830.0, y: 480.0, width: 1.1, height: 0.6 },
+  57: { x: 830.0, y: 525.0, width: 1.1, height: 0.6 },
+  58: { x: 830.0, y: 570.0, width: 1.1, height: 0.6 },
+  59: { x: 830.0, y: 617.0, width: 1.1, height: 0.6 },
+  60: { x: 800.0, y: 662.0, width: 1.9, height: 0.6 },
+  61: { x: 830.0, y: 707.0, width: 1.1, height: 0.6 },
+  62: { x: 830.0, y: 753.0, width: 1.1, height: 0.6 },
+};
+
+// 旅游路线格子坐标（重新定位版）
+const TOURIST_CELL_POSITIONS = {
+  100: { x: 120, y: 760, width: 0.7, height: 0.7 },
+  101: { x: 184, y: 695, width: 0.7, height: 0.7 },
+  102: { x: 247, y: 630, width: 0.7, height: 0.7 },
+  103: { x: 311, y: 565, width: 0.7, height: 0.7 },
+  104: { x: 375, y: 500, width: 0.7, height: 0.7 },
+  105: { x: 438, y: 435, width: 0.7, height: 0.7 },
+  106: { x: 502, y: 370, width: 0.7, height: 0.7 },
+  107: { x: 565, y: 305, width: 0.7, height: 0.7 },
+  108: { x: 629, y: 240, width: 0.7, height: 0.7 },
+  109: { x: 693, y: 175, width: 0.7, height: 0.7 },
+  110: { x: 756, y: 110, width: 0.7, height: 0.7 },
+  111: { x: 820, y: 45, width: 0.7, height: 0.7 },
+};
+
+const BASE_IMAGE_SIZE = 900;
+const GRID_SIZE = 42;
+
+// ========== 辅助函数 - 动态获取棋盘缩放比例 ==========
+function getBoardScale() {
+  const board = document.getElementById("board");
+  if (!board) return 1;
+  const rect = board.getBoundingClientRect();
+  return rect.width / BASE_IMAGE_SIZE;
+}
+
+function getCellRect(cellId) {
+  // 先检查旅游路线格子
+  let pos = TOURIST_CELL_POSITIONS[cellId];
+  if (!pos) {
+    pos = CELL_POSITIONS[cellId];
+  }
+  if (!pos) return null;
+  
+  const board = document.getElementById("board");
+  if (!board) return null;
+  
+  const boardRect = board.getBoundingClientRect();
+  const boardWidth = boardRect.width;
+  const boardHeight = boardRect.height;
+  
+  // 将基准坐标(0-900)转换为比例(0-1)，再乘以实际宽高
+  const ratioX = pos.x / 900;
+  const ratioY = pos.y / 900;
+  const ratioWidth = (pos.width * GRID_SIZE) / 900;
+  const ratioHeight = (pos.height * GRID_SIZE) / 900;
+  
+  const left = ratioX * boardWidth;
+  const top = ratioY * boardHeight;
+  const width = ratioWidth * boardWidth;
+  const height = ratioHeight * boardHeight;
+  const centerX = left + width / 2;
+  const centerY = top + height / 2;
+  
+  return {
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    centerX: centerX,
+    centerY: centerY,
+    right: left + width,
+    bottom: top + height
+  };
+}
+
+function getPawnSize() {
+  const board = document.getElementById("board");
+  if (!board) return 20;
+  const boardWidth = board.getBoundingClientRect().width;
+  // 更小的棋子：棋盘宽度 / 25，范围 12-24px
+  let size = boardWidth / 25;
+  return Math.min(24, Math.max(12, size));
+}
+
+function getPlayerColor(name) {
+  if (!playerColorMap[name]) {
+    const order = gameState?.turn_order || [];
+    const idx = order.indexOf(name);
+    if (idx >= 0) {
+      playerColorMap[name] = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+    } else {
+      playerColorMap[name] = PLAYER_COLORS[Object.keys(playerColorMap).length % PLAYER_COLORS.length];
+    }
+  }
+  return playerColorMap[name];
+}
+
+function getAvatarFile(avatarId, customAvatar) {
+  if (customAvatar) {
+    return customAvatar;
+  }
+  const avatar = DEFAULT_AVATARS.find(a => a.id === avatarId);
+  return avatar ? `./images/${avatar.file}` : `./images/小兔.jpg`;
+}
+
+// 更新所有棋子（支持动态缩放）
+function updatePawns(players, turnOrder) {
+  if (isMovingPawn) return;
+  document.querySelectorAll(".pawn").forEach(p => p.remove());
+  if (!players) return;
+
+  const pawnSize = getPawnSize();
+  const positionPlayers = {};
+  
+  turnOrder.forEach(name => {
+    const p = players[name];
+    if (!p || p.bankrupt || p.spectator) return;
+    let pos = p.position;
+    // 处理旅游模式位置
+    if (typeof pos === 'string' && pos.startsWith('tour_')) {
+      const tourIndex = parseInt(pos.split('_')[1]);
+      pos = 100 + tourIndex;  // tour_0 -> 100, tour_1 -> 101, ...
+    }
+    if (!positionPlayers[pos]) positionPlayers[pos] = [];
+    positionPlayers[pos].push(name);
+  });
+
+  for (const [posId, names] of Object.entries(positionPlayers)) {
+    const rect = getCellRect(parseInt(posId));
+    if (!rect) continue;
+
+    const total = names.length;
+    const radius = total > 1 ? pawnSize * 0.6 : 0;
+
+    names.forEach((name, idx) => {
+      const p = players[name];
+      const pawn = document.createElement("div");
+      pawn.className = "pawn";
+      pawn.style.width = `${pawnSize}px`;
+      pawn.style.height = `${pawnSize}px`;
+
+      if (gameState && gameState.started && gameState.turn_order && gameState.turn_order[gameState.current_turn] === name) {
+        pawn.classList.add("active-turn");
+      }
+
+      const angle = total > 1 ? (idx / total) * Math.PI * 2 - Math.PI / 2 : 0;
+      const offsetX = total > 1 ? Math.cos(angle) * radius : 0;
+      const offsetY = total > 1 ? Math.sin(angle) * radius : 0;
+      
+      const left = rect.centerX + offsetX;
+      const top = rect.centerY + offsetY;
+
+      pawn.style.left = `${left}px`;
+      pawn.style.top = `${top}px`;
+      pawn.style.transform = "translate(-50%, -50%)";
+      pawn.style.background = getPlayerColor(name);
+      pawn.style.border = "2px solid #fff";
+      pawn.style.boxShadow = `0 0 0 2px ${getPlayerColor(name)}80, 0 2px 8px rgba(0,0,0,0.3)`;
+
+      const avatarUrl = getAvatarFile(p.avatar, p.custom_avatar);
+      if (avatarUrl.startsWith('data:image')) {
+        pawn.innerHTML = `<img src="${avatarUrl}">`;
+      } else {
+        pawn.innerHTML = `<img src="${avatarUrl}" onerror="this.parentElement.textContent='${p.avatar === 'xiaotu' ? '🐰' : '🐶'}'">`;
+      }
+
+      document.getElementById("board").appendChild(pawn);
+    });
+  }
+}
+
+// 更新建筑标记（支持动态缩放）
+function updateBuildings(state) {
+  document.querySelectorAll(".building-marker").forEach(b => b.remove());
+  if (!state || !state.properties) return;
+
+  for (const [propId, ownerName] of Object.entries(state.properties)) {
+    const cellId = parseInt(propId);
+    const rect = getCellRect(cellId);
+    if (!rect) continue;
+
+    const level = state.prop_levels?.[propId] || 0;
+    if (level <= 0) continue;
+
+    const container = document.createElement("div");
+    container.className = "building-marker";
+    container.style.left = `${rect.left + 4}px`;
+    container.style.top = `${rect.top + 4}px`;
+    container.style.display = "flex";
+    container.style.flexWrap = "wrap";  // 允许换行
+    container.style.gap = "2px";
+    container.style.maxWidth = `${rect.width - 8}px`;  // 限制最大宽度
+
+    const baseFontSize = Math.min(16, rect.width * 0.28);
+    
+    if (level >= 5) {
+      const hotel = document.createElement("div");
+      hotel.innerHTML = "🏨";
+      hotel.style.fontSize = `${baseFontSize}px`;
+      hotel.style.filter = `drop-shadow(0 0 2px ${getPlayerColor(ownerName)})`;
+      container.appendChild(hotel);
+    } else {
+      const houseCount = Math.min(level, 4);
+      const maxPerRow = rect.width > 60 ? 3 : 2;
+      for (let i = 0; i < houseCount; i++) {
+        const house = document.createElement("div");
+        house.innerHTML = "🏠";
+        house.style.fontSize = `${baseFontSize - 2}px`;
+        house.style.filter = `drop-shadow(0 0 2px ${getPlayerColor(ownerName)})`;
+        container.appendChild(house);
+      }
+    }
+    document.getElementById("board").appendChild(container);
+  }
+}
+
+function updatePlayerPanel(state) {
+  const container = document.getElementById("player-list");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  const order = state.turn_order || [];
+  const curr = order[state.current_turn];
+  
+  const playerCountSpan = document.getElementById("player-count");
+  if (playerCountSpan) playerCountSpan.textContent = `(${order.length}人)`;
+  
+  const manageBtn = document.getElementById("manage-players-btn");
+  if (manageBtn) {
+    manageBtn.style.display = (isOwner && !state.started) ? "inline-block" : "none";
+  }
+  
+  order.forEach(name => {
+    const p = state.players[name];
+    if (!p) return;
+    const propCount = Object.values(state.properties || {}).filter(o => o === name).length;
+    
+    const avatarUrl = getAvatarFile(p.avatar, p.custom_avatar);
+    
+    const div = document.createElement("div");
+    div.className = `player-card ${name === curr && state.started ? "active" : ""} ${p.bankrupt ? "bankrupt" : ""} ${p.disconnected ? "disconnected" : ""}`;
+    div.innerHTML = `
+      <div class="player-avatar">
+        ${avatarUrl.startsWith('data:image') ? 
+          `<img src="${avatarUrl}">` : 
+          `<img src="${avatarUrl}" onerror="this.parentElement.textContent='${p.avatar === 'xiaotu' ? '🐰' : '🐶'}'">`
+        }
+      </div>
+      <div class="player-info">
+        <div class="player-name">${escapeHtml(name)}${p.bankrupt ? " 💀" : ""}${p.disconnected ? " 📡离线" : ""}${name === state.owner ? " 👑" : ""}${p.spectator ? " <span class='spectator-badge'>观战</span>" : ""}${p.auto_turn ? " <span class='player-auto-tag'>🤖托管</span>" : ""}</div>
+        <div class="player-money">💰 ${p.money} 元</div>
+        <div class="player-props">🏠 ${propCount} 处地产</div>
+        <div class="player-total">📈 总资产 ${p.total} 元</div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function handleLog(msg) {
+  const box = document.getElementById("log-box");
+  if (!box) return;
+  const div = document.createElement("div");
+  div.className = "log-line";
+  
+  if (msg.includes("[系统]") || msg.includes("[加入]") || msg.includes("[离开]") || msg.includes("[回合]")) div.className = "log-line log-system";
+  else if (msg.includes("[移动]")) div.className = "log-line log-move";
+  else if (msg.includes("[购买]") || msg.includes("[升级]")) div.className = "log-line log-buy";
+  else if (msg.includes("[租金]")) div.className = "log-line log-rent";
+  else if (msg.includes("[机会]") || msg.includes("[命运]")) div.className = "log-line log-chance";
+  else if (msg.includes("[税务]") || msg.includes("[起点]")) div.className = "log-line log-tax";
+  else if (msg.includes("[游戏结束]")) div.className = "log-line log-end";
+  else if (msg.includes("[骰子]")) div.className = "log-line log-dice";
+  else div.className = "log-line";
+  
+  div.textContent = msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 200) box.removeChild(box.firstChild);
+}
+
+function setTopStatus(msg) {
+  const statusSpan = document.getElementById("top-status");
+  if (statusSpan) statusSpan.textContent = msg;
+}
+
+function initAvatarSelect() {
+  const container = document.getElementById("avatar-list");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  DEFAULT_AVATARS.forEach((avatar, idx) => {
+    const div = document.createElement("div");
+    div.className = "avatar-option";
+    div.innerHTML = `<img src="./images/${avatar.file}" alt="${avatar.name}" onerror="this.parentElement.innerHTML='${avatar.emoji}'">`;
+    div.title = avatar.name;
+    div.onclick = () => {
+      document.querySelectorAll(".avatar-option").forEach(a => a.classList.remove("selected"));
+      div.classList.add("selected");
+      myAvatar = avatar.id;
+      myCustomAvatar = null;
+      document.getElementById("custom-avatar-preview").style.display = "none";
+    };
+    if (idx === 0) div.classList.add("selected");
+    container.appendChild(div);
+  });
+}
+
+function handleCustomAvatarUpload(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      myCustomAvatar = e.target.result;
+      myAvatar = "custom";
+      
+      document.querySelectorAll(".avatar-option").forEach(a => a.classList.remove("selected"));
+      
+      const previewDiv = document.getElementById("custom-avatar-preview");
+      const previewImg = document.getElementById("custom-preview-img");
+      previewImg.src = myCustomAvatar;
+      previewDiv.style.display = "flex";
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function clearCustomAvatar() {
+  myCustomAvatar = null;
+  myAvatar = "xiaotu";
+  document.getElementById("custom-avatar-preview").style.display = "none";
+  document.querySelectorAll(".avatar-option").forEach((a, idx) => {
+    a.classList.remove("selected");
+    if (idx === 0) a.classList.add("selected");
+  });
+}
+
+function initEmojiPanel() {
+  const panel = document.getElementById("emoji-panel");
+  if (!panel) return;
+  panel.innerHTML = "";
+  for (let i = 1; i <= 19; i++) {
+    const emoji = document.createElement("div");
+    emoji.className = "emoji-item";
+    emoji.innerHTML = `<img src="./images/chat/${i}.gif" onerror="this.style.display='none'">`;
+    emoji.onclick = () => {
+      if (ws) ws.send(JSON.stringify({ action: `/emoji ${i}` }));
+    };
+    panel.appendChild(emoji);
+  }
+}
+
+function buildBoard() {
+  const board = document.getElementById("board");
+  if (!board) return;
+  board.innerHTML = `
+    <div class="dice-area" id="dice-area">
+      <div id="dice-icon">🎲</div>
+      <div id="dice-number">等待掷骰</div>
+    </div>
+  `;
+}
+
+function switchMapBackground(mapName) {
+  currentMapImage = mapName;
+  const board = document.getElementById("board");
+  if (board) board.style.backgroundImage = `url('./images/map/${mapName}.jpg')`;
+  const mapNameSpan = document.getElementById("map-name");
+  if (mapNameSpan) mapNameSpan.textContent = mapName;
+  const titleMapName = document.getElementById("title-map-name");
+  if (titleMapName) titleMapName.textContent = mapName;
+}
+
+// 骰子动画函数（简化版，直接显示后端传来的GIF）
+function playDiceAnimation(diceValue, diceGif, onComplete) {
+  if (diceRollInterval) {
+    clearInterval(diceRollInterval);
+    diceRollInterval = null;
+  }
+  
+  const diceIcon = document.getElementById("dice-icon");
+  const diceNumber = document.getElementById("dice-number");
+  
+  if (!diceIcon) {
+    if (onComplete) onComplete();
+    return;
+  }
+  
+  const rollBtn = document.getElementById("btn-roll");
+  if (rollBtn) rollBtn.disabled = true;
+  
+  // 直接显示正确的GIF
+  const gifPath = `./images/dice/${diceGif}`;
+  diceIcon.innerHTML = `<img src="${gifPath}" style="width:48px;height:48px;display:block;" onerror="this.parentElement.textContent='🎲${diceValue}'">`;
+  if (diceNumber) diceNumber.textContent = `🎲 ${diceValue} 点`;
+  
+  // 延迟后执行回调
+  setTimeout(() => {
+    if (onComplete) onComplete();
+  }, 500);
+  
+  // 3秒后恢复骰子图标
+   //setTimeout(() => {
+    // if (diceIcon && !diceRollInterval) {
+     //  diceIcon.innerHTML = "🎲";
+      // if (diceNumber) diceNumber.textContent = "等待掷骰";
+    // }
+  // }, 2500);
+}
+
+// 棋子移动动画（支持动态调整，修复旅游路线）
+function animatePawnMove(name, stepsArray, onComplete) {
+  if (isMovingPawn) {
+    if (onComplete) onComplete();
+    return;
+  }
+  isMovingPawn = true;
+  
+  let i = 0;
+  const tempPlayers = JSON.parse(JSON.stringify(gameState.players));
+  
+  function step() {
+    if (i >= stepsArray.length) {
+      isMovingPawn = false;
+      if (gameState && gameState.players && gameState.players[name]) {
+        // 更新位置（保持为数字或字符串）
+        gameState.players[name].position = stepsArray[stepsArray.length - 1];
+      }
+      updatePawns(tempPlayers, gameState.turn_order);
+      updateBuildings(gameState);
+      if (onComplete) onComplete();
+      return;
+    }
+    if (tempPlayers[name]) {
+      tempPlayers[name].position = stepsArray[i];
+      updatePawns(tempPlayers, gameState.turn_order);
+      updateBuildings(gameState);
+    }
+    i++;
+    setTimeout(step, 150);
+  }
+  step();
+}
+
+// 弹窗函数
+function showModal(icon, title, msg, action, onConfirm, onCancel) {
+  const modal = document.getElementById("modal-overlay");
+  const iconSpan = document.getElementById("modal-icon");
+  const titleSpan = document.getElementById("modal-title");
+  const msgSpan = document.getElementById("modal-msg");
+  const yesBtn = document.getElementById("modal-yes");
+  const noBtn = document.getElementById("modal-no");
+  
+  if (iconSpan) iconSpan.textContent = icon;
+  if (titleSpan) titleSpan.textContent = title;
+  if (msgSpan) msgSpan.textContent = msg;
+  
+  const confirmHandler = () => {
+    closeModal();
+    if (onConfirm) onConfirm();
+    else if (action) doAction(action);
+  };
+  
+  const cancelHandler = () => {
+    closeModal();
+    if (onCancel) onCancel();
+    else if (action === 'buy' || action === 'upgrade') doAction('skip');
+  };
+  
+  if (yesBtn) yesBtn.onclick = confirmHandler;
+  if (noBtn) noBtn.onclick = cancelHandler;
+  if (modal) modal.style.display = "flex";
+}
+
+function closeModal() {
+  const modal = document.getElementById("modal-overlay");
+  if (modal) modal.style.display = "none";
+}
+
+function showCardModal(icon, title, msg, onConfirm) {
+  const modal = document.getElementById("card-modal-overlay");
+  const iconSpan = document.getElementById("card-modal-icon");
+  const titleSpan = document.getElementById("card-modal-title");
+  const msgSpan = document.getElementById("card-modal-msg");
+  const yesBtn = document.getElementById("card-modal-yes");
+
+  if (iconSpan) iconSpan.textContent = icon;
+  if (titleSpan) titleSpan.textContent = title;
+  if (msgSpan) msgSpan.textContent = msg;
+  if (yesBtn) {
+    yesBtn.onclick = () => {
+      closeCardModal();
+      if (onConfirm) onConfirm();
+    };
+  }
+  if (modal) modal.style.display = "flex";
+}
+
+function closeCardModal() {
+  const modal = document.getElementById("card-modal-overlay");
+  if (modal) modal.style.display = "none";
+}
+
+function toggleAuto() {
+  if (!ws) return;
+  if (!gameState || !gameState.started) {
+    handleLog("[提示] 游戏开始后才能设置托管");
+    return;
+  }
+  ws.send(JSON.stringify({ action: "/auto" }));
+}
+
+function showPlayerManage() {
+  if (!isOwner || (gameState && gameState.started)) {
+    handleLog("[提示] 只有房主可以在游戏开始前管理玩家");
+    return;
+  }
+  
+  const overlay = document.getElementById("player-manage-overlay");
+  const listDiv = document.getElementById("player-manage-list");
+  
+  if (!overlay || !listDiv) return;
+  
+  const players = gameState ? Object.keys(gameState.players) : [];
+  
+  listDiv.innerHTML = players.map(name => `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-dark); border-radius: 12px; margin-bottom: 8px;">
+      <span>${escapeHtml(name)} ${name === myName ? '(你)' : ''} ${name === gameState?.owner ? '👑房主' : ''}</span>
+      ${name !== myName && name !== gameState?.owner ? `<button class="kick-btn" onclick="kickPlayer('${name}')">踢出</button>` : ''}
+    </div>
+  `).join('');
+  
+  overlay.style.display = "flex";
+}
+
+function closePlayerManage() {
+  const overlay = document.getElementById("player-manage-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+function kickPlayer(playerName) {
+  if (!isOwner) {
+    handleLog("[提示] 只有房主可以踢人");
+    return;
+  }
+  if (gameState && gameState.started) {
+    handleLog("[提示] 游戏开始后不能踢人");
+    closePlayerManage();
+    return;
+  }
+  if (ws) {
+    ws.send(JSON.stringify({ action: `/kick ${playerName}` }));
+    closePlayerManage();
+  }
+}
+
+// 房间操作函数
+function createRoom() {
+  const name = document.getElementById("name-input").value.trim();
+  if (!name) { alert("请输入名字"); return; }
+  myName = name;
+  roomId = null;
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("game-screen").style.display = "block";
+  document.getElementById("topbar").style.display = "flex";
+  connectWebSocket();
+}
+
+function joinRoom() {
+  const name = document.getElementById("name-input").value.trim();
+  const rid = document.getElementById("room-input").value.trim();
+  if (!name) { alert("请输入名字"); return; }
+  if (!rid) { alert("请输入房间号"); return; }
+  myName = name;
+  roomId = rid;
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("game-screen").style.display = "block";
+  document.getElementById("topbar").style.display = "flex";
+  connectWebSocket();
+}
+
+function enterGame() {
+  const name = document.getElementById("name-input").value.trim();
+  const rid = document.getElementById("room-input").value.trim();
+  if (!name) { alert("请输入名字"); return; }
+  myName = name;
+  roomId = rid || null;
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("game-screen").style.display = "block";
+  document.getElementById("topbar").style.display = "flex";
+  connectWebSocket();
+}
+
+function exitRoom() {
+  if (!confirm("确定要退出当前房间吗？")) return;
+  if (ws) ws.close();
+  gameState = null;
+  myName = null;
+  roomId = null;
+  isOwner = false;
+  mySpectator = false;
+  playerColorMap = {};
+  isMovingPawn = false;
+  myAutoTurn = false;
+  if (diceRollInterval) clearInterval(diceRollInterval);
+
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("game-screen").style.display = "none";
+  document.getElementById("topbar").style.display = "none";
+  document.querySelectorAll(".pawn").forEach(p => p.remove());
+  document.getElementById("log-box").innerHTML = "";
+  document.getElementById("chat-messages").innerHTML = "";
+}
+
+function connectWebSocket() {
+  ws = new WebSocket(WS_URL);
+  
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ 
+      name: myName, 
+      avatar: myAvatar, 
+      custom_avatar: myCustomAvatar,
+      room_id: roomId 
+    }));
+  };
+  
+  ws.onmessage = e => {
+    const data = JSON.parse(e.data);
+    
+    if (data.type === "log") handleLog(data.msg);
+    
+    if (data.type === "state") {
+      handleState(data.state);
+    }
+    
+    if (data.type === "room_info") {
+      roomId = data.room_id;
+      isOwner = data.is_owner;
+      const roomInfoSpan = document.getElementById("room-info");
+      if (roomInfoSpan) {
+        roomInfoSpan.innerHTML = `🏠 房间号: <span class="room-code">${roomId}</span> ${isOwner ? '👑房主' : ''}`;
+      }
+    }
+    
+    if (data.type === "your_turn") {
+      setTopStatus("⚡ 轮到你了！");
+      const rollBtn = document.getElementById("btn-roll");
+      if (rollBtn && !isMovingPawn && !diceRollInterval && !mySpectator) rollBtn.disabled = false;
+    }
+    
+    if (data.type === "dice_result") {
+      const dice = data.dice;
+      const diceGif = data.dice_gif;
+      const oldPos = data.old_pos;
+      const newPos = data.new_pos;
+      const totalCells = data.total_cells;
+      
+      console.log(`[调试] 骰子:${dice}, GIF:${diceGif}, 旧位置:${oldPos}, 新位置:${newPos}, 总格子:${totalCells}`);
+      
+      let steps = [];
+      
+      if (newPos > oldPos) {
+        for (let i = oldPos + 1; i <= newPos; i++) {
+          steps.push(i);
+        }
+      } else if (newPos < oldPos) {
+        for (let i = oldPos + 1; i < totalCells; i++) {
+          steps.push(i);
+        }
+        for (let i = 0; i <= newPos; i++) {
+          steps.push(i);
+        }
+      } else {
+        steps = [oldPos];
+      }
+      
+      playDiceAnimation(dice, diceGif, () => {
+        handleLog(`[骰子] ${myName} 掷出了 ${dice} 点`);
+        
+        animatePawnMove(myName, steps, () => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: "move_complete" }));
+          }
+          if (gameState && gameState.players && gameState.players[myName]) {
+            gameState.players[myName].position = newPos;
+            updatePawns(gameState.players, gameState.turn_order);
+          }
+        });
+      });
+    }
+    
+    if (data.type === "dice_result_public") {
+      const dice = data.dice;
+      const diceGif = data.dice_gif;
+      const playerName = data.name;
+      
+      if (playerName !== myName) {
+        const diceIcon = document.getElementById("dice-icon");
+        const diceNumber = document.getElementById("dice-number");
+        
+        if (diceIcon) {
+          const gifPath = `./images/dice/${diceGif}`;
+          diceIcon.innerHTML = `<img src="${gifPath}" style="width:48px;height:48px;display:block;" onerror="this.parentElement.textContent='🎲${dice}'">`;
+          if (diceNumber) diceNumber.textContent = `🎲 ${dice} 点`;
+          
+         //setTimeout(() => {
+           // if (diceIcon && !diceRollInterval && gameState && //gameState.turn_order[gameState.current_turn] !== myName) {
+             // diceIcon.innerHTML = "🎲";
+              //if (diceNumber) diceNumber.textContent = "等待掷骰";
+          //  }
+        //  }, 2500);
+        }
+      }
+      
+      handleLog(`[骰子] ${playerName} 掷出了 ${dice} 点`);
+    }
+    
+    if (data.type === "ask_buy") {
+      showModal("🏠", "是否购买地产？", data.msg, "buy", 
+        () => {
+          ws.send(JSON.stringify({ action: "buy", is_tour: data.is_tour || false, tour_pos: data.tour_pos, cell: data.cell }));
+        },
+        () => {
+          ws.send(JSON.stringify({ action: "skip", is_tour: data.is_tour || false, tour_pos: data.tour_pos }));
+        }
+      );
+    }
+    
+    if (data.type === "ask_upgrade") {
+      showModal("⬆️", "是否升级地产？", data.msg, "upgrade",
+        () => {
+          ws.send(JSON.stringify({ action: "upgrade", is_tour: data.is_tour || false, tour_pos: data.tour_pos, cell: data.cell }));
+        },
+        () => {
+          ws.send(JSON.stringify({ action: "skip", is_tour: data.is_tour || false, tour_pos: data.tour_pos }));
+        }
+      );
+    }
+    
+    if (data.type === "show_card") {
+      showCardModal("🎴", data.card_type, data.msg, () => {
+        ws.send(JSON.stringify({ action: "confirm_card" }));
+      });
+    }
+    
+    if (data.type === "chat") {
+      addChatMessage(data.name, data.msg, data.time);
+    }
+    
+    if (data.type === "players") {
+      if (isOwner) {
+        const manageBtn = document.getElementById("manage-players-btn");
+        if (manageBtn && gameState && !gameState.started) {
+          manageBtn.style.display = "inline-block";
+        }
+      }
+    }
+  };
+  
+  ws.onerror = () => {
+    handleLog("[错误] 连接失败，请先启动 server_ws.py");
+    setTopStatus("❌ 连接失败");
+  };
+  ws.onclose = () => setTopStatus("❌ 连接已断开");
+}
+
+function handleState(state) {
+  if (diceRollInterval) {
+    clearInterval(diceRollInterval);
+    diceRollInterval = null;
+  }
+
+  const order = state.turn_order || [];
+  
+  gameState = state;
+  switchMapBackground(state.current_map || "中国之旅");
+  
+  if (!isMovingPawn) {
+    updatePawns(state.players, state.turn_order);
+    updatePlayerPanel(state);
+  }
+  
+  updateBuildings(state);
+  
+  const curr = state.turn_order[state.current_turn];
+  const rollBtn = document.getElementById("btn-roll");
+  const startBtn = document.getElementById("btn-start");
+  const autoBtn = document.getElementById("btn-auto");
+  
+  if (state.started) {
+    if (curr === myName && !isMovingPawn && !diceRollInterval && !mySpectator) {
+      setTopStatus("⚡ 轮到你了！");
+      if (rollBtn) rollBtn.disabled = false;
+    } else if (curr === myName && (isMovingPawn || diceRollInterval)) {
+      setTopStatus("🎲 移动中...");
+      if (rollBtn) rollBtn.disabled = true;
+    } else {
+      if (mySpectator) {
+        setTopStatus(`👁️ 观战模式 - 当前回合: ${curr}`);
+      } else {
+        setTopStatus(`⏳ 等待 ${curr} 操作...`);
+      }
+      if (rollBtn) rollBtn.disabled = true;
+    }
+    if (startBtn) startBtn.style.display = "none";
+    if (autoBtn) autoBtn.style.display = "flex";
+  } else {
+    if (mySpectator) {
+      setTopStatus(`👁️ 观战模式 - 等待游戏开始...`);
+    } else {
+      setTopStatus(`等待开始游戏... ${isOwner ? '(你是房主，可开始游戏)' : ''}`);
+    }
+    if (rollBtn) rollBtn.disabled = true;
+    if (startBtn) {
+      const realPlayers = Object.values(state.players).filter(p => !p.spectator).length;
+      if (isOwner && realPlayers >= 2) {
+        startBtn.style.display = "flex";
+      } else {
+        startBtn.style.display = "none";
+      }
+    }
+    if (autoBtn) autoBtn.style.display = "none";
+  }
+}
+
+function doAction(action) {
+  if (!ws) return;
+  
+  if (action === "status") {
+    showStatusInfo();
+    return;
+  }
+  
+  if (action === "skip") {
+    ws.send(JSON.stringify({ action: "skip" }));
+    closeModal();
+    return;
+  }
+  
+  if (action === "roll") {
+    if (isMovingPawn || diceRollInterval) {
+      handleLog("[提示] 动画播放中，请稍后");
+      return;
+    }
+    ws.send(JSON.stringify({ action: "roll" }));
+    const rollBtn = document.getElementById("btn-roll");
+    if (rollBtn) rollBtn.disabled = true;
+    return;
+  }
+  
+  if (action === "start") {
+    ws.send(JSON.stringify({ action: "start" }));
+    return;
+  }
+  
+  ws.send(JSON.stringify({ action }));
+}
+
+function showStatusInfo() {
+  if (!gameState || !gameState.players) {
+    handleLog("[系统] 暂无游戏状态数据");
+    return;
+  }
+  
+  handleLog("===== 📊 当前状态 =====");
+  const order = gameState.turn_order || [];
+  order.forEach(name => {
+    const p = gameState.players[name];
+    if (p) {
+      const props = p.properties || [];
+      const propNames = props.join("、") || "无";
+      const statusText = p.bankrupt ? " 💀 已破产" : "";
+      const spectatorText = p.spectator ? " 👁️ 观战" : "";
+      const autoText = p.auto_turn ? " 🤖 托管" : "";
+      handleLog(`  ${name}：💰 ${p.money}元 | 📍 位置:${p.position} | 🏠 ${propNames}${statusText}${spectatorText}${autoText}`);
+    }
+  });
+  handleLog("=========================");
+}
+
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg = input.value.trim();
+  if (msg && ws) {
+    ws.send(JSON.stringify({ action: "/chat " + msg }));
+    input.value = "";
+  }
+}
+
+function handleChatKeypress(e) {
+  if (e.key === "Enter") sendChat();
+}
+
+function addChatMessage(name, msg, time) {
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+  const div = document.createElement("div");
+  div.className = "chat-message";
+  
+  let msgHtml = "";
+  if (msg.startsWith("[表情]")) {
+    const emojiNum = msg.match(/\d+/);
+    if (emojiNum) msgHtml = `<img src="./images/chat/${emojiNum[0]}.gif" class="emoji-img" onerror="this.style.display='none'">`;
+    else msgHtml = msg;
+  } else {
+    msgHtml = escapeHtml(msg);
+  }
+  
+  div.innerHTML = `<span class="name">${escapeHtml(name)}</span><span class="time">${time}</span><br>${msgHtml}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  while (container.children.length > 100) container.removeChild(container.firstChild);
+}
+
+function showMapSelect() {
+  if (gameState && gameState.started) {
+    handleLog("[提示] 游戏进行中不能切换地图");
+    return;
+  }
+  if (!isOwner) {
+    handleLog("[提示] 只有房主可以切换地图");
+    return;
+  }
+  const overlay = document.getElementById("map-select-overlay");
+  const optionsDiv = document.getElementById("map-options");
+  if (!overlay || !optionsDiv) return;
+  optionsDiv.innerHTML = "";
+  const maps = ["中国之旅"];
+  maps.forEach(map => {
+    const div = document.createElement("div");
+    div.className = "map-option";
+    div.innerHTML = `<img src="./images/map/${map}.jpg" onerror="this.style.display='none'"><br>${map}`;
+    div.onclick = () => {
+      document.querySelectorAll(".map-option").forEach(opt => opt.classList.remove("selected"));
+      div.classList.add("selected");
+      if (ws) {
+        ws.send(JSON.stringify({ action: "/map " + map }));
+        closeMapSelect();
+      }
+    };
+    optionsDiv.appendChild(div);
+  });
+  overlay.style.display = "flex";
+}
+
+function closeMapSelect() {
+  const overlay = document.getElementById("map-select-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+// 窗口大小变化时重新调整棋子和建筑位置
+window.addEventListener("resize", () => {
+  if (gameState && !isMovingPawn) {
+    updatePawns(gameState.players, gameState.turn_order);
+    updateBuildings(gameState);
+  }
+});
+
+document.getElementById("name-input")?.addEventListener("keypress", e => {
+  if (e.key === "Enter") enterGame();
+});
+document.getElementById("room-input")?.addEventListener("keypress", e => {
+  if (e.key === "Enter") enterGame();
+});
+
+// 预加载骰子图片
+for (let i = 1; i <= 6; i++) {
+  const img = new Image();
+  img.src = `./images/dice/${i}.gif`;
+}
+
+// 初始化
+initAvatarSelect();
+initEmojiPanel();
+buildBoard();
+</script>
+</body>
+</html>
