@@ -1228,21 +1228,14 @@ async def handler(ws, path):
     name = None
     room = None
     
-    # ========== 添加健康检查（解决 Render 部署问题）==========
+    # 直接接收第一条消息，不做任何 HTTP 响应
     try:
-        raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
-    except asyncio.TimeoutError:
-        try:
-            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
-            await ws.close()
-        except:
-            pass
-        return
+        raw = await ws.recv()
     except websockets.exceptions.ConnectionClosedOK:
         return
     except Exception:
         return
-    
+        
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
@@ -1440,14 +1433,10 @@ def start_health_server():
     httpd.serve_forever()
     
 async def main():
-    # 启动健康检查 HTTP 服务器（Render 需要）
-    threading.Thread(target=start_health_server, daemon=True).start()
-    
     print("=" * 50)
     print("  🎲 大富翁 WebSocket 服务器启动！")
     port = int(os.environ.get("PORT", 10000))
     print(f"  WebSocket 端口: {port}")
-    print("  健康检查端口: 8080")
     print("=" * 50)
     
     # 启动定时清理任务
