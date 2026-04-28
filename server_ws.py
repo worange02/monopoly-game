@@ -1223,8 +1223,14 @@ async def handle_message(room, ws, name, data):
         return
 
 # ========== WebSocket 连接处理 ==========
-# ========== WebSocket 连接处理 ==========
 async def handler(ws, path):
+    # 忽略健康检查请求，只处理 WebSocket 请求
+    if path != '/ws':
+        # 如果是健康检查（/healthz），不会走到这里，因为8080端口的独立服务处理了
+        # 但为了保险，如果不是 /ws 路径，直接关闭连接
+        await ws.close()
+        return
+        
     name = None
     room = None
     
@@ -1450,7 +1456,7 @@ async def main():
     print("=" * 50)
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
-    async with websockets.serve(handler, "0.0.0.0", 10000, path="/ws"):
+    async with websockets.serve(handler, "0.0.0.0", 10000):
         print("服务器运行在 ws://0.0.0.0:10000")
         print("按 Ctrl+C 停止服务器")
         try:
