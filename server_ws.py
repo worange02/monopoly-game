@@ -1436,7 +1436,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         pass  # 禁用日志输出
 
 def start_health_server():
-    httpd = HTTPServer(('0.0.0.0', 8080), HealthHandler)
+    httpd = HTTPServer(('0.0.0.0', 10000), HealthHandler)
     httpd.serve_forever()
     
 async def main():
