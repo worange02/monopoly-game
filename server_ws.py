@@ -1450,7 +1450,7 @@ async def main():
     print("=" * 50)
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
-    async with websockets.serve(handler, "0.0.0.0", 10000):
+    async with websockets.serve(handler, "0.0.0.0", 10000, path="/ws"):
         print("服务器运行在 ws://0.0.0.0:10000")
         print("按 Ctrl+C 停止服务器")
         try:
