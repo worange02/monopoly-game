@@ -1221,34 +1221,32 @@ async def handle_message(room, ws, name, data):
         return
 
 # ========== WebSocket 连接处理 ==========
-# ========== WebSocket 连接处理 ==========
-async def handler(ws, path):
-    name = None
-    room = None
-    
-    # ========== 添加健康检查（解决 Render 部署问题）==========
+async def handler(websocket, path):
+    """处理 WebSocket 连接，兼容 Railway 健康检查"""
     try:
-        raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
+        # 设置短超时，捕获 HTTP 健康检查请求
+        message = await asyncio.wait_for(websocket.recv(), timeout=1.0)
     except asyncio.TimeoutError:
-        try:
-            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
-            await ws.close()
-        except:
-            pass
+        # 健康检查超时，直接关闭（不响应）
+        await websocket.close()
         return
     except websockets.exceptions.ConnectionClosedOK:
         return
     except Exception:
+        await websocket.close()
         return
     
+    # 检查是否是 HTTP 请求（健康检查）
+    if isinstance(message, bytes) and message.startswith(b'GET'):
+        # 是 HTTP 请求，不是 WebSocket，关闭即可
+        await websocket.close()
+        return
+    
+    # 正常 WebSocket 消息处理
     try:
-        data = json.loads(raw)
+        data = json.loads(message)
     except json.JSONDecodeError:
-        try:
-            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
-            await ws.close()
-        except:
-            pass
+        await websocket.close()
         return
     
     name = data.get("name", "").strip()
@@ -1257,6 +1255,7 @@ async def handler(ws, path):
     room_id_input = data.get("room_id", None)
     
     if not name:
+        await websocket.close()
         return
     
     # 查找或创建房间（注意：这里没有额外缩进）
