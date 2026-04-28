@@ -1,4 +1,4 @@
-# server_ws.py - 修复房间号回收和释放问题，修复旅游路线逻辑
+# server_ws.py - Render 完整修复版（保留所有功能）
 import os 
 import asyncio
 import websockets
@@ -10,6 +10,7 @@ from maps_config import *
 from avatars_config import AVATARS, CHAT_EMOJIS
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+import sys
 
 # ========== 全局状态 ==========
 rooms = {}
@@ -34,14 +35,13 @@ def recycle_room_id(room_id):
 async def clean_empty_rooms():
     """每5分钟清理一次空房间"""
     while True:
-        await asyncio.sleep(300)  # 300秒 = 5分钟
+        await asyncio.sleep(300)
         for room_id, room in list(rooms.items()):
-            # 统计真实玩家（非观战、非破产、还在线）
             real_players = [
                 n for n, p in room.game_state["players"].items()
                 if not p.get("spectator", False) 
                 and not p.get("bankrupt", False)
-                and n in room.players  # 还在WebSocket连接中
+                and n in room.players
             ]
             if len(real_players) == 0:
                 del rooms[room_id]
@@ -58,6 +58,7 @@ class Room:
             "players": {},
             "turn_order": [],
             "current_turn": 0,
+            "current_round": 0,
             "properties": {},
             "prop_levels": {},
             "current_map": "中国之旅",
@@ -80,12 +81,12 @@ class Room:
             "players": {},
             "turn_order": [],
             "current_turn": 0,
+            "current_round": 0,
             "properties": {},
             "prop_levels": {},
             "current_map": current_map_name,
             "tour_mode": {},
         }
-        # 保留玩家列表但重置状态
         for name in list(self.players.keys()):
             self.game_state["players"][name] = {
                 "money": 0,
@@ -98,6 +99,15 @@ class Room:
                 "avatar": self.game_state["players"].get(name, {}).get("avatar", "xiaotu"),
                 "auto_turn": False,
                 "custom_avatar": self.game_state["players"].get(name, {}).get("custom_avatar", None),
+                "skip_turn_until": None,
+                "waiting_buy": None,
+                "waiting_upgrade": None,
+                "waiting_card": None,
+                "waiting_card_type": None,
+                "waiting_buy_cell": None,
+                "waiting_upgrade_cell": None,
+                "waiting_buy_tour_pos": None,
+                "waiting_upgrade_tour_pos": None,
             }
 
 rooms = {}
@@ -208,7 +218,7 @@ def build_state_snapshot(room):
         "players": players_info,
         "turn_order": room.game_state["turn_order"],
         "current_turn": room.game_state["current_turn"],
-        "current_round": room.game_state.get("current_round", 0),  # 添加回合数
+        "current_round": room.game_state.get("current_round", 0),
         "properties": room.game_state["properties"],
         "prop_levels": room.game_state["prop_levels"],
         "player_list": list(room.players.keys()),
@@ -275,12 +285,10 @@ async def auto_roll_and_move(room, name):
     player = room.game_state["players"][name]
     current_map = get_map_data(room.game_state["current_map"])
 
-    # 检查是否破产或观战
     if player.get("bankrupt", False) or player.get("spectator", False):
         await next_turn(room)
         return
     
-    # 检查是否被免费停车场冻结
     skip_until = player.get("skip_turn_until")
     current_round = room.game_state.get("current_round", 0)
     if skip_until is not None and skip_until > current_round:
@@ -291,21 +299,17 @@ async def auto_roll_and_move(room, name):
         player["skip_turn_until"] = None
         await broadcast_to_room(room, f"[免费停车场] {name} 休息结束，可以继续行动")
 
-    # 检查监狱
     if player.get("jail_turns", 0) > 0:
         player["jail_turns"] -= 1
         await broadcast_to_room(room, f"[托管] {name} 在监狱中，剩余{player['jail_turns']}回合")
         await next_turn(room)
         return
     
-    # 检查旅游模式
     if room.game_state["tour_mode"].get(name, {}).get("active", False):
         await auto_tour_roll(room, name)
         return
 
-    # 正常掷骰子
     dice = random.randint(1, 6)
-    dice_gif = f"{dice}.gif"  # 添加这行
     old_pos = player["position"]
     total_cells = len(current_map)
     new_pos = (old_pos + dice) % total_cells
@@ -313,7 +317,6 @@ async def auto_roll_and_move(room, name):
 
     await broadcast_to_room(room, f"[托管] {name} 自动掷骰子: {dice} 点")
 
-    # 广播骰子结果
     dice_data = json.dumps({
         "type": "dice_result_public",
         "name": name,
@@ -339,7 +342,6 @@ async def auto_tour_roll(room, name):
     current_pos = tour_data["position"]
     
     dice = random.randint(1, 3)
-    dice_gif = f"{dice}.gif"  # 添加这行
     new_pos = current_pos + dice
     
     await broadcast_to_room(room, f"[托管] {name} 在旅游路线中掷出 {dice} 步")
@@ -348,7 +350,6 @@ async def auto_tour_roll(room, name):
         "type": "dice_result_public",
         "name": name,
         "dice": dice,
-        "dice_gif": dice_gif,  # 添加这行
         "is_tour": True,
         "tour_old_pos": current_pos,
         "tour_new_pos": new_pos
@@ -368,9 +369,7 @@ async def process_move(room, name, dice, old_pos, new_pos, passed_start=False):
     """处理移动逻辑"""
     player = room.game_state["players"][name]
     current_map = get_map_data(room.game_state["current_map"])
-    total_cells = len(current_map)
 
-    # 经过起点奖励3000元
     if passed_start:
         start_bonus = current_map[0].get("pass_bonus", 3000)
         player["money"] += start_bonus
@@ -423,7 +422,6 @@ async def handle_tour_land(room, name, tour_pos):
         
         if owner is None:
             if is_auto:
-                # 托管模式：自动判断是否购买
                 if player["money"] >= cell["price"]:
                     player["money"] -= cell["price"]
                     room.game_state["properties"][prop_id] = name
@@ -432,7 +430,7 @@ async def handle_tour_land(room, name, tour_pos):
                         player["properties"].append(cell["id"])
                     await broadcast_to_room(room, f"[托管购买] {name} 自动购买了景点 {cell['name']}，花费{cell['price']}元")
                 else:
-                    await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{cell['price']})，放弃购买景点 {cell['name']}")
+                    await broadcast_to_room(room, f"[托管] {name} 资金不足，放弃购买景点 {cell['name']}")
                 await next_turn(room)
                 return
             elif ws and not player.get("disconnected") and not player.get("spectator"):
@@ -455,13 +453,12 @@ async def handle_tour_land(room, name, tour_pos):
             if level < 5:
                 upgrade_cost = cell.get("build_cost", cell["price"] * 0.5)
                 if is_auto:
-                    # 托管模式：自动判断是否升级
                     if player["money"] >= upgrade_cost:
                         player["money"] -= upgrade_cost
                         room.game_state["prop_levels"][prop_id] = level + 1
                         await broadcast_to_room(room, f"[托管升级] {name} 自动将{cell['name']}升级为{get_level_name(level + 1)}")
                     else:
-                        await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{upgrade_cost})，放弃升级景点 {cell['name']}")
+                        await broadcast_to_room(room, f"[托管] {name} 资金不足，放弃升级景点 {cell['name']}")
                     await next_turn(room)
                     return
                 elif ws and not player.get("disconnected") and not player.get("spectator"):
@@ -501,7 +498,6 @@ async def exit_tour_mode(room, name):
     """退出旅游模式，返回主地图的旅游结束点（格子48）"""
     tour_data = room.game_state["tour_mode"].pop(name, None)
     if tour_data:
-        # 旅游结束后回到格子48（济南/旅游结束点）
         room.game_state["players"][name]["position"] = 48
         await broadcast_to_room(room, f"[旅游] {name} 完成旅游，回到主地图的旅游结束点")
     await broadcast_room_state(room)
@@ -518,7 +514,6 @@ async def handle_land(room, name, position, passed_start=False):
     
     is_auto = player.get("auto_turn", False)
     
-    # 停留在起点，额外获得3000元
     if cell["type"] == "start":
         bonus = cell.get("pass_bonus", 3000)
         player["money"] += bonus
@@ -526,7 +521,6 @@ async def handle_land(room, name, position, passed_start=False):
         await next_turn(room)
         return
     
-    # ========== 免费停车场逻辑 ==========
     if cell["type"] == "free_parking":
         current_round = room.game_state.get("current_round", 0)
         player["skip_turn_until"] = current_round + 1
@@ -580,9 +574,7 @@ async def handle_land(room, name, position, passed_start=False):
         owner = room.game_state["properties"].get(prop_id)
         
         if owner is None:
-            # 无人拥有，可以购买
             if is_auto:
-                # 托管模式：自动判断是否购买
                 if player["money"] >= cell["price"]:
                     player["money"] -= cell["price"]
                     room.game_state["properties"][prop_id] = name
@@ -591,7 +583,7 @@ async def handle_land(room, name, position, passed_start=False):
                         player["properties"].append(cell["id"])
                     await broadcast_to_room(room, f"[托管购买] {name} 自动购买了 {cell['name']}，花费{cell['price']}元")
                 else:
-                    await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{cell['price']})，放弃购买 {cell['name']}")
+                    await broadcast_to_room(room, f"[托管] {name} 资金不足，放弃购买 {cell['name']}")
                 await next_turn(room)
                 return
             elif ws and not player.get("disconnected") and not player.get("spectator"):
@@ -609,18 +601,16 @@ async def handle_land(room, name, position, passed_start=False):
                 await next_turn(room)
                 return
         elif owner == name:
-            # 自己拥有，可以升级
             level = room.game_state["prop_levels"].get(prop_id, 0)
             if level < 5:
                 upgrade_cost = cell.get("build_cost", cell["price"] * 0.5)
                 if is_auto:
-                    # 托管模式：自动判断是否升级
                     if player["money"] >= upgrade_cost:
                         player["money"] -= upgrade_cost
                         room.game_state["prop_levels"][prop_id] = level + 1
                         await broadcast_to_room(room, f"[托管升级] {name} 自动将{cell['name']}升级为{get_level_name(level + 1)}")
                     else:
-                        await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{upgrade_cost})，放弃升级 {cell['name']}")
+                        await broadcast_to_room(room, f"[托管] {name} 资金不足，放弃升级 {cell['name']}")
                     await next_turn(room)
                     return
                 elif ws and not player.get("disconnected") and not player.get("spectator"):
@@ -641,7 +631,6 @@ async def handle_land(room, name, position, passed_start=False):
                 await next_turn(room)
                 return
         else:
-            # 其他人拥有，支付租金
             level = room.game_state["prop_levels"].get(prop_id, 0)
             if cell["type"] == "railway":
                 railway_count = sum(1 for p in room.game_state["players"][owner].get("properties", [])
@@ -677,19 +666,15 @@ async def handle_card_effect(room, name, card, card_type):
     
     elif card.get("action") == "goto_start":
         player["money"] += card.get("money", 0)
-        old_pos = player["position"]
         player["position"] = 0
         await broadcast_to_room(room, f"[{card_type}] {name} 移动到起点，获得{card.get('money', 0)}元")
-        # 触发起点停留事件（获得额外奖励）
         await handle_land(room, name, 0, False)
         return
     
     elif card.get("action") == "goto_beijing":
         beijing_pos = 42
-        old_pos = player["position"]
         player["position"] = beijing_pos
         await broadcast_to_room(room, f"[{card_type}] {name} 移动到北京")
-        # 触发落地事件（会检查是否被占有并支付租金）
         await handle_land(room, name, beijing_pos, False)
         return
     
@@ -728,14 +713,9 @@ async def handle_card_effect(room, name, card, card_type):
                     break
     
     elif card.get("action") == "auction_property":
-        # 紧急支出：拍卖一块地产获得现金
         my_properties = player.get("properties", [])
         if my_properties:
-            # 随机选择一块地产拍卖
-            import random
             prop_id = random.choice(my_properties)
-            
-            # 获取地产价格
             prop_price = 0
             prop_name = ""
             for cell in current_map:
@@ -746,13 +726,10 @@ async def handle_card_effect(room, name, card, card_type):
             
             half_price = prop_price // 2
             
-            # 移除地产
             del room.game_state["properties"][str(prop_id)]
             if str(prop_id) in room.game_state["prop_levels"]:
                 del room.game_state["prop_levels"][str(prop_id)]
             player["properties"].remove(prop_id)
-            
-            # 获得一半现金
             player["money"] += half_price
             
             await broadcast_to_room(room, f"[{card_type}] {name} 拍卖了 {prop_name}，获得 {half_price} 元")
@@ -783,7 +760,6 @@ async def next_turn(room):
     if not room.started:
         return
 
-    # 更新全局回合计数器
     room.game_state["current_round"] = room.game_state.get("current_round", 0) + 1
     current_round = room.game_state["current_round"]
     
@@ -801,7 +777,6 @@ async def next_turn(room):
     
     total = len(order)
     
-    # 查找下一个可以行动的玩家
     for _ in range(total):
         room.game_state["current_turn"] = (room.game_state["current_turn"] + 1) % total
         name = order[room.game_state["current_turn"]]
@@ -810,27 +785,20 @@ async def next_turn(room):
         if not player:
             continue
         
-        # 检查是否破产或观战
         if player.get("bankrupt", False) or player.get("spectator", False):
             continue
         
-        # ========== 免费停车场冻结检查 ==========
         skip_until = player.get("skip_turn_until")
         if skip_until is not None and skip_until > current_round:
-            # 还在冻结期内，跳过该玩家
             await broadcast_to_room(room, f"[免费停车场] {name} 正在休息，跳过本回合")
-            # 清除等待状态
             player["waiting_buy"] = None
             player["waiting_upgrade"] = None
             player["waiting_card"] = None
-            # 继续查找下一个玩家
             continue
         elif skip_until is not None and skip_until <= current_round:
-            # 冻结期结束，清除标记
             player["skip_turn_until"] = None
             await broadcast_to_room(room, f"[免费停车场] {name} 休息结束，可以继续行动")
         
-        # 找到可以行动的玩家
         if room.game_state["tour_mode"].get(name, {}).get("active", False):
             tour_data = room.game_state["tour_mode"][name]
             ws = get_ws_by_name(room, name)
@@ -854,53 +822,6 @@ async def next_turn(room):
             await ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
         await broadcast_room_state(room)
         return
-    
-    # 没有找到可行动的玩家，游戏结束
-    await broadcast_to_room(room, "[游戏结束] 没有存活的玩家，游戏结束")
-    room.started = False
-    room.reset_game_state()
-    await broadcast_to_room(room, "[系统] 🎮 游戏结束，可以开始新的一局！")
-    await broadcast_room_state(room)
-
-    order = room.game_state["turn_order"]
-    active_players = [n for n in order if not room.game_state["players"][n].get("bankrupt", False) 
-                      and not room.game_state["players"][n].get("spectator", False)]
-    
-    if len(active_players) == 0:
-        await broadcast_to_room(room, "[游戏结束] 没有存活的玩家，游戏结束")
-        room.started = False
-        room.reset_game_state()
-        await broadcast_to_room(room, "[系统] 🎮 游戏结束，可以开始新的一局！")
-        await broadcast_room_state(room)
-        return
-    
-    total = len(order)
-    
-    for _ in range(total):
-        room.game_state["current_turn"] = (room.game_state["current_turn"] + 1) % total
-        name = order[room.game_state["current_turn"]]
-        player = room.game_state["players"].get(name)
-        if player and not player.get("bankrupt", False) and not player.get("spectator", False):
-            if room.game_state["tour_mode"].get(name, {}).get("active", False):
-                tour_data = room.game_state["tour_mode"][name]
-                ws = get_ws_by_name(room, name)
-                if ws:
-                    await ws.send(json.dumps({"type": "your_turn", "msg": f"旅游模式：当前位置 {tour_data['position']}/11，请掷骰子(1-3步)前进"}, ensure_ascii=False))
-                await broadcast_room_state(room)
-                return
-            
-            await broadcast_to_room(room, f"[回合] 现在轮到 {name} 的回合")
-            ws = get_ws_by_name(room, name)
-            
-            if player.get("auto_turn", False) or player.get("disconnected", False) or not ws:
-                await broadcast_to_room(room, f"[托管] {name} 处于托管状态，自动操作")
-                await auto_roll_and_move(room, name)
-                return
-            
-            if ws and not player.get("disconnected"):
-                await ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
-            await broadcast_room_state(room)
-            return
     
     await broadcast_to_room(room, "[游戏结束] 没有存活的玩家，游戏结束")
     room.started = False
@@ -1006,16 +927,15 @@ async def handle_message(room, ws, name, data):
     
     if msg == "start":
         if not room.started and name == room.owner:
-            # 清理空房间 - 只统计还在线的玩家
             real_players = [n for n, p in room.game_state["players"].items() 
                            if not p.get("spectator", False) 
                            and not p.get("bankrupt", False)
-                           and n in room.players]  # 只统计还在 WebSocket 连接中的玩家
+                           and n in room.players]
             if len(real_players) >= 2:
                 room.started = True
                 room.game_state["turn_order"] = real_players
                 room.game_state["current_turn"] = 0
-                room.game_state["current_round"] = 0  # 添加回合计数器
+                room.game_state["current_round"] = 0
                 start_money = get_start_money(room.game_state["current_map"])
                 for n in room.game_state["turn_order"]:
                     if n in room.game_state["players"]:
@@ -1028,7 +948,7 @@ async def handle_message(room, ws, name, data):
                             "disconnected": False,
                             "spectator": False,
                             "auto_turn": False,
-                            "skip_turn_until": None,  # 免费停车场冻结回合数
+                            "skip_turn_until": None,
                             "waiting_buy": None,
                             "waiting_upgrade": None,
                             "waiting_card": None,
@@ -1161,7 +1081,6 @@ async def handle_message(room, ws, name, data):
         if room.game_state["tour_mode"].get(name, {}).get("active", False):
             tour_data = room.game_state["tour_mode"][name]
             dice = random.randint(1, 3)
-            dice_gif = f"{dice}.gif"  # 添加这行
             new_pos = tour_data["position"] + dice
             
             await broadcast_to_room(room, f"[旅游] {name} 掷出 {dice} 步")
@@ -1170,7 +1089,6 @@ async def handle_message(room, ws, name, data):
                 "type": "dice_result_public",
                 "name": name,
                 "dice": dice,
-                "dice_gif": dice_gif,  # 添加这行
                 "is_tour": True,
                 "tour_old_pos": tour_data["position"],
                 "tour_new_pos": new_pos
@@ -1194,7 +1112,6 @@ async def handle_message(room, ws, name, data):
             return
         
         dice = random.randint(1, 6)
-        dice_gif = f"{dice}.gif"  # 添加这行
         current_map = get_map_data(room.game_state["current_map"])
         old_pos = player["position"]
         total_cells = len(current_map)
@@ -1212,7 +1129,6 @@ async def handle_message(room, ws, name, data):
         await ws.send(json.dumps({
             "type": "dice_result", 
             "dice": dice,
-            "dice_gif": dice_gif,  # 添加这行
             "old_pos": old_pos,
             "new_pos": new_pos,
             "total_cells": total_cells,
@@ -1224,26 +1140,21 @@ async def handle_message(room, ws, name, data):
 
 # ========== WebSocket 连接处理 ==========
 async def handler(ws, path):
-        
-    name = None
-    room = None
+    print(f"[WebSocket] 新连接: {path}")
     
-    # 直接接收第一条消息，不做任何 HTTP 响应
+    # 直接接收第一条消息
     try:
         raw = await ws.recv()
     except websockets.exceptions.ConnectionClosedOK:
         return
-    except Exception:
+    except Exception as e:
+        print(f"[错误] 接收消息失败: {e}")
         return
         
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        try:
-            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
-            await ws.close()
-        except:
-            pass
+        print(f"[错误] 无效的 JSON 数据")
         return
     
     name = data.get("name", "").strip()
@@ -1252,9 +1163,10 @@ async def handler(ws, path):
     room_id_input = data.get("room_id", None)
     
     if not name:
+        await ws.send(json.dumps({"type": "log", "msg": "名字不能为空"}))
         return
     
-    # 查找或创建房间（注意：这里没有额外缩进）
+    # 查找或创建房间
     if room_id_input:
         try:
             room_num = int(room_id_input)
@@ -1413,10 +1325,10 @@ async def handler(ws, path):
             
             await broadcast_room_state(room)
 
-# ========== 健康检查 HTTP 服务器（为 Render 部署添加）==========
+# ========== HTTP 健康检查服务器 ==========
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/healthz':
+        if self.path == '/healthz' or self.path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
@@ -1426,41 +1338,49 @@ class HealthHandler(BaseHTTPRequestHandler):
             self.end_headers()
     
     def log_message(self, format, *args):
-        pass  # 禁用日志输出
+        pass
 
 def start_health_server():
-    httpd = HTTPServer(('0.0.0.0', 8080), HealthHandler)
-    httpd.serve_forever()
-    
+    """在独立线程中启动 HTTP 健康检查服务器"""
+    health_port = 8080
+    try:
+        httpd = HTTPServer(('0.0.0.0', health_port), HealthHandler)
+        print(f"[健康检查] HTTP 服务器运行在端口 {health_port}")
+        httpd.serve_forever()
+    except Exception as e:
+        print(f"[健康检查] 启动失败: {e}")
+
+# ========== 主函数 ==========
 async def main():
     print("=" * 50)
     print("  🎲 大富翁 WebSocket 服务器启动！")
     port = int(os.environ.get("PORT", 10000))
     print(f"  WebSocket 端口: {port}")
-    print(f"  健康检查端口: 8080")
     print("=" * 50)
+    
+    # 启动 HTTP 健康检查服务器（在独立线程中）
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
     
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
     
-    # ========== 关键修改：启动健康检查服务器（在独立线程中）==========
-    health_thread = threading.Thread(target=start_health_server, daemon=True)
-    health_thread.start()
-    print(f"✅ 健康检查服务器运行在 http://0.0.0.0:8080")
-    
     # 启动 WebSocket 服务器
     async with websockets.serve(handler, "0.0.0.0", port):
         print(f"✅ WebSocket 服务器运行在 ws://0.0.0.0:{port}")
-        print("✅ 等待连接...")
+        print(f"✅ 健康检查运行在 http://0.0.0.0:8080")
+        print("✅ 等待前端连接...")
         print("按 Ctrl+C 停止服务器")
         try:
-            await asyncio.Future()  # 永久运行
+            await asyncio.Future()
         except asyncio.CancelledError:
             print("\n服务器正在关闭...")
-            print("服务器已停止")
-            
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\n收到退出信号，服务器已停止")
+    except Exception as e:
+        print(f"服务器启动失败: {e}")
+        sys.exit(1)
