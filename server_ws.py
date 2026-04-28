@@ -1437,20 +1437,28 @@ async def main():
     print("  🎲 大富翁 WebSocket 服务器启动！")
     port = int(os.environ.get("PORT", 10000))
     print(f"  WebSocket 端口: {port}")
+    print(f"  健康检查端口: 8080")
     print("=" * 50)
     
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
     
+    # ========== 关键修改：启动健康检查服务器（在独立线程中）==========
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
+    print(f"✅ 健康检查服务器运行在 http://0.0.0.0:8080")
+    
+    # 启动 WebSocket 服务器
     async with websockets.serve(handler, "0.0.0.0", port):
-        print(f"服务器运行在 ws://0.0.0.0:{port}")
+        print(f"✅ WebSocket 服务器运行在 ws://0.0.0.0:{port}")
+        print("✅ 等待连接...")
         print("按 Ctrl+C 停止服务器")
         try:
-            await asyncio.Future()
+            await asyncio.Future()  # 永久运行
         except asyncio.CancelledError:
             print("\n服务器正在关闭...")
             print("服务器已停止")
-
+            
 if __name__ == "__main__":
     try:
         asyncio.run(main())
