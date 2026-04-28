@@ -1,5 +1,5 @@
 # server_ws.py - 修复房间号回收和释放问题，修复旅游路线逻辑
-import os 
+
 import asyncio
 import websockets
 import json
@@ -1221,23 +1221,34 @@ async def handle_message(room, ws, name, data):
         return
 
 # ========== WebSocket 连接处理 ==========
+# ========== WebSocket 连接处理 ==========
 async def handler(ws, path):
     name = None
     room = None
     
-    # 直接接收第一条消息
+    # ========== 添加健康检查（解决 Render 部署问题）==========
     try:
-        raw = await ws.recv()
+        raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
+    except asyncio.TimeoutError:
+        try:
+            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
+            await ws.close()
+        except:
+            pass
+        return
     except websockets.exceptions.ConnectionClosedOK:
         return
     except Exception:
         return
-        
+    
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        # 不是有效的 JSON 消息，直接关闭连接
-        await ws.close()
+        try:
+            await ws.send("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK")
+            await ws.close()
+        except:
+            pass
         return
     
     name = data.get("name", "").strip()
@@ -1406,57 +1417,29 @@ async def handler(ws, path):
                 await broadcast_to_room(room, f"[系统] 房主变更为 {new_owner}")
             
             await broadcast_room_state(room)
-    
+
 async def main():
-    try:
-        print("=" * 50)
-        print("  🎲 大富翁 WebSocket 服务器启动！")
-        print("  部署环境: Railway")
-        print("=" * 50)
-        
-        # 检查导入的模块
-        print("[DEBUG] 检查 maps_config...")
+    print("=" * 50)
+    print("  🎲 大富翁 WebSocket 服务器启动！")
+    print("  📁 头像请放在 images/ 目录下")
+    print("  🗺️ 地图图片请放在 images/map/ 目录下")
+    print("  😊 表情包请放在 images/chat/ 目录下 (1-19.gif)")
+    print("  🎲 骰子图片请放在 images/dice/ 目录下")
+    print("  💰 初始资金: 50000元")
+    print("  🏆 获胜金额: 50000总资产")
+    print("  🎯 起点奖励: 经过3000元，停留额外3000元(共6000元)")
+    print("=" * 50)
+    # 启动定时清理任务
+    asyncio.create_task(clean_empty_rooms())
+    async with websockets.serve(handler, "0.0.0.0", 8765):
+        print("服务器运行在 ws://0.0.0.0:8765")
+        print("按 Ctrl+C 停止服务器")
         try:
-            from maps_config import CHINA_MAP, TOURIST_ROUTE, CHANCE_CARDS, FATE_CARDS, STOCK_CARDS, ALL_MAPS, MAP_START_MONEY
-            print("[DEBUG] maps_config 导入成功")
-            print(f"[DEBUG] CHINA_MAP 长度: {len(CHINA_MAP)}")
-        except Exception as e:
-            print(f"[ERROR] maps_config 导入失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return
-        
-        print("[DEBUG] 检查 avatars_config...")
-        try:
-            from avatars_config import AVATARS, CHAT_EMOJIS
-            print(f"[DEBUG] AVATARS 长度: {len(AVATARS)}")
-        except Exception as e:
-            print(f"[ERROR] avatars_config 导入失败: {e}")
-            traceback.print_exc()
-            return
-        
-        # 获取 Railway 分配的端口
-        port = int(os.environ.get("PORT", 8765))
-        print(f"✅ 服务运行在端口: {port}")
-        
-        # 启动定时清理任务
-        asyncio.create_task(clean_empty_rooms())
-        
-        # 只启动 WebSocket 服务器
-        async with websockets.serve(handler, "0.0.0.0", port):
-            print(f"✅ WebSocket 服务器运行在 ws://0.0.0.0:{port}")
-            print("✅ 等待客户端连接...")
-            print("按 Ctrl+C 停止服务器")
-            
-            try:
-                await asyncio.Future()
-            except asyncio.CancelledError:
-                print("\n服务器正在关闭...")
-    except Exception as e:
-        print(f"[FATAL] 服务器启动失败: {e}")
-        import traceback
-        traceback.print_exc()
-            
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            print("\n服务器正在关闭...")
+            print("服务器已停止")
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())
