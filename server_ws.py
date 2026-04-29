@@ -1219,7 +1219,8 @@ async def handle_message(room, ws, name, data):
         
         await broadcast_to_room(room, f"[骰子] {name} 掷出了 {dice} 点")
         return
-
+        
+PORT = int(os.environ.get("PORT", 8765))  # Railway 会注入 PORT 环境变量
 # ========== WebSocket 连接处理 ==========
 async def handler(websocket):
     path = websocket.path  # 如果需要 path，从这里获取
@@ -1431,8 +1432,9 @@ async def main():
     print("=" * 50)
     # 启动定时清理任务
     asyncio.create_task(clean_empty_rooms())
-    async with websockets.serve(handler, "0.0.0.0", 8765):
-        print("服务器运行在 ws://0.0.0.0:8765")
+    async with websockets.serve(handler, "0.0.0.0", PORT):
+        print(f"服务器运行在端口 {PORT}")
+        await asyncio.Future()  # 永久运行
         print("按 Ctrl+C 停止服务器")
         try:
             await asyncio.Future()
