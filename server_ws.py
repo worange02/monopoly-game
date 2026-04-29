@@ -1221,7 +1221,8 @@ async def handle_message(room, ws, name, data):
         return
 
 # ========== WebSocket 连接处理 ==========
-async def handler(websocket, path):
+async def handler(websocket):
+    path = websocket.path  # 如果需要 path，从这里获取
     """处理 WebSocket 连接，兼容 Railway 健康检查"""
     try:
         # 设置短超时，捕获 HTTP 健康检查请求
