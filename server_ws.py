@@ -1,5 +1,5 @@
-# server_ws.py - 修复房间号回收和释放问题，修复旅游路线逻辑
-
+# server_websocket.py - 修复房间号回收和释放问题，修复旅游路线逻辑
+import os
 import asyncio
 import websockets
 import json
@@ -8,6 +8,8 @@ import time
 from datetime import datetime
 from maps_config import *
 from avatars_config import AVATARS, CHAT_EMOJIS
+
+PORT = int(os.environ.get("PORT", 8765))  # Railway 会注入 PORT 环境变量
 
 # ========== 全局状态 ==========
 rooms = {}
@@ -125,9 +127,9 @@ def get_level_name(level):
 async def broadcast_to_room(room, msg, msg_type="log"):
     data = json.dumps({"type": msg_type, "msg": msg}, ensure_ascii=False)
     to_remove = []
-    for name, ws in room.players.items():
+    for name, websocket in room.players.items():
         try:
-            await ws.send(data)
+            await websocket.send(data)
         except:
             to_remove.append(name)
     for name in to_remove:
@@ -138,9 +140,9 @@ async def broadcast_room_state(room):
     state = build_state_snapshot(room)
     data = json.dumps({"type": "state", "state": state}, ensure_ascii=False)
     to_remove = []
-    for name, ws in room.players.items():
+    for name, websocket in room.players.items():
         try:
-            await ws.send(data)
+            await websocket.send(data)
         except:
             to_remove.append(name)
     for name in to_remove:
@@ -155,9 +157,9 @@ async def broadcast_room_chat(room, name, msg):
         "time": datetime.now().strftime("%H:%M:%S")
     }, ensure_ascii=False)
     to_remove = []
-    for n, ws in room.players.items():
+    for n, websocket in room.players.items():
         try:
-            await ws.send(chat_data)
+            await websocket.send(chat_data)
         except:
             to_remove.append(n)
     for n in to_remove:
@@ -215,7 +217,7 @@ def build_state_snapshot(room):
         "owner": room.owner
     }
 
-def get_ws_by_name(room, name):
+def get_websocket_by_name(room, name):
     return room.players.get(name)
 
 def total_assets(room, player):
@@ -321,9 +323,9 @@ async def auto_roll_and_move(room, name):
         "total_cells": total_cells,
         "passed_start": passed_start
     }, ensure_ascii=False)
-    for ws in room.players.values():
+    for websocket in room.players.values():
         try:
-            await ws.send(dice_data)
+            await websocket.send(dice_data)
         except:
             pass
 
@@ -351,9 +353,9 @@ async def auto_tour_roll(room, name):
         "tour_old_pos": current_pos,
         "tour_new_pos": new_pos
     }, ensure_ascii=False)
-    for ws in room.players.values():
+    for websocket in room.players.values():
         try:
-            await ws.send(dice_data)
+            await websocket.send(dice_data)
         except:
             pass
     
@@ -387,9 +389,9 @@ async def enter_tour_mode(room, name, original_pos):
         "original_pos": original_pos
     }
     await broadcast_to_room(room, f"[旅游] {name} 来到旅游出发点，开始旅游路线！")
-    ws = get_ws_by_name(room, name)
-    if ws:
-        await ws.send(json.dumps({"type": "your_turn", "msg": "旅游模式：请掷骰子(1-3步)前进"}, ensure_ascii=False))
+    websocket = get_websocket_by_name(room, name)
+    if websocket:
+        await websocket.send(json.dumps({"type": "your_turn", "msg": "旅游模式：请掷骰子(1-3步)前进"}, ensure_ascii=False))
 
 async def handle_tour_land(room, name, tour_pos):
     """处理旅游路线落地"""
@@ -404,7 +406,7 @@ async def handle_tour_land(room, name, tour_pos):
     
     cell = route[tour_pos]
     player = room.game_state["players"][name]
-    ws = get_ws_by_name(room, name)
+    websocket = get_websocket_by_name(room, name)
     
     await broadcast_to_room(room, f"[旅游] {name} 到达景点：{cell['name']}")
     
@@ -433,8 +435,8 @@ async def handle_tour_land(room, name, tour_pos):
                     await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{cell['price']})，放弃购买景点 {cell['name']}")
                 await next_turn(room)
                 return
-            elif ws and not player.get("disconnected") and not player.get("spectator"):
-                await ws.send(json.dumps({
+            elif websocket and not player.get("disconnected") and not player.get("spectator"):
+                await websocket.send(json.dumps({
                     "type": "ask_buy",
                     "msg": f"景点 {cell['name']} 无人拥有，售价{cell['price']}元，你有{player['money']}元。是否购买？",
                     "cell": cell["id"],
@@ -462,8 +464,8 @@ async def handle_tour_land(room, name, tour_pos):
                         await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{upgrade_cost})，放弃升级景点 {cell['name']}")
                     await next_turn(room)
                     return
-                elif ws and not player.get("disconnected") and not player.get("spectator"):
-                    await ws.send(json.dumps({
+                elif websocket and not player.get("disconnected") and not player.get("spectator"):
+                    await websocket.send(json.dumps({
                         "type": "ask_upgrade",
                         "msg": f"{cell['name']} 当前{get_level_name(level)}，升级需{upgrade_cost}元，是否升级？",
                         "cell": cell["id"],
@@ -508,7 +510,7 @@ async def exit_tour_mode(room, name):
 async def handle_land(room, name, position, passed_start=False):
     current_map = get_map_data(room.game_state["current_map"])
     cell = current_map[position]
-    ws = get_ws_by_name(room, name)
+    websocket = get_websocket_by_name(room, name)
     player = room.game_state["players"][name]
     
     await broadcast_to_room(room, f"[移动] {name} 来到 {cell['name']}")
@@ -546,8 +548,8 @@ async def handle_land(room, name, position, passed_start=False):
         if is_auto:
             await handle_card_effect(room, name, card, card_type)
             return
-        elif ws and not player.get("disconnected") and not player.get("spectator"):
-            await ws.send(json.dumps({
+        elif websocket and not player.get("disconnected") and not player.get("spectator"):
+            await websocket.send(json.dumps({
                 "type": "show_card",
                 "card": card,
                 "card_type": card_type,
@@ -592,8 +594,8 @@ async def handle_land(room, name, position, passed_start=False):
                     await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{cell['price']})，放弃购买 {cell['name']}")
                 await next_turn(room)
                 return
-            elif ws and not player.get("disconnected") and not player.get("spectator"):
-                await ws.send(json.dumps({
+            elif websocket and not player.get("disconnected") and not player.get("spectator"):
+                await websocket.send(json.dumps({
                     "type": "ask_buy",
                     "msg": f"{cell['name']} 无人拥有，售价{cell['price']}元，你有{player['money']}元。是否购买？",
                     "cell": position,
@@ -621,8 +623,8 @@ async def handle_land(room, name, position, passed_start=False):
                         await broadcast_to_room(room, f"[托管] {name} 资金不足({player['money']}<{upgrade_cost})，放弃升级 {cell['name']}")
                     await next_turn(room)
                     return
-                elif ws and not player.get("disconnected") and not player.get("spectator"):
-                    await ws.send(json.dumps({
+                elif websocket and not player.get("disconnected") and not player.get("spectator"):
+                    await websocket.send(json.dumps({
                         "type": "ask_upgrade",
                         "msg": f"{cell['name']} 当前{get_level_name(level)}，升级需{upgrade_cost}元，是否升级？",
                         "cell": position,
@@ -769,9 +771,9 @@ async def handle_card_effect(room, name, card, card_type):
 
     if not has_pending:
         if room.game_state["tour_mode"].get(name, {}).get("active", False):
-            ws = get_ws_by_name(room, name)
-            if ws:
-                await ws.send(json.dumps({"type": "your_turn", "msg": "旅游模式：请继续掷骰子(1-3步)前进"}, ensure_ascii=False))
+            websocket = get_websocket_by_name(room, name)
+            if websocket:
+                await websocket.send(json.dumps({"type": "your_turn", "msg": "旅游模式：请继续掷骰子(1-3步)前进"}, ensure_ascii=False))
         else:
             await next_turn(room)
 
@@ -789,13 +791,13 @@ async def next_turn(room):
     active_players = [n for n in order if not room.game_state["players"][n].get("bankrupt", False) 
                       and not room.game_state["players"][n].get("spectator", False)]
     
-    if len(active_players) == 0:
-        await broadcast_to_room(room, "[游戏结束] 没有存活的玩家，游戏结束")
-        room.started = False
-        room.reset_game_state()
-        await broadcast_to_room(room, "[系统] 🎮 游戏结束，可以开始新的一局！")
-        await broadcast_room_state(room)
-        return
+#    if len(active_players) == 0:
+      #  await broadcast_to_room(room, "[游戏结束] 没有存活的玩家，游戏结束")
+    #    room.started = False
+   #     room.reset_game_state()
+    #    await broadcast_to_room(room, "[系统] 🎮 游戏结束，可以开始新的一局！")
+   #     await broadcast_room_state(room)
+    #    return
     
     total = len(order)
     
@@ -831,9 +833,9 @@ async def next_turn(room):
         # 找到可以行动的玩家
         if room.game_state["tour_mode"].get(name, {}).get("active", False):
             tour_data = room.game_state["tour_mode"][name]
-            ws = get_ws_by_name(room, name)
-            if ws:
-                await ws.send(json.dumps({
+            websocket = get_websocket_by_name(room, name)
+            if websocket:
+                await websocket.send(json.dumps({
                     "type": "your_turn", 
                     "msg": f"旅游模式：当前位置 {tour_data['position']}/11，请掷骰子(1-3步)前进"
                 }, ensure_ascii=False))
@@ -841,15 +843,15 @@ async def next_turn(room):
             return
         
         await broadcast_to_room(room, f"[回合] 现在轮到 {name} 的回合")
-        ws = get_ws_by_name(room, name)
+        websocket = get_websocket_by_name(room, name)
         
-        if player.get("auto_turn", False) or player.get("disconnected", False) or not ws:
+        if player.get("auto_turn", False) or player.get("disconnected", False) or not websocket:
             await broadcast_to_room(room, f"[托管] {name} 处于托管状态，自动操作")
             await auto_roll_and_move(room, name)
             return
         
-        if ws and not player.get("disconnected"):
-            await ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
+        if websocket and not player.get("disconnected"):
+            await websocket.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
         await broadcast_room_state(room)
         return
     
@@ -881,22 +883,22 @@ async def next_turn(room):
         if player and not player.get("bankrupt", False) and not player.get("spectator", False):
             if room.game_state["tour_mode"].get(name, {}).get("active", False):
                 tour_data = room.game_state["tour_mode"][name]
-                ws = get_ws_by_name(room, name)
-                if ws:
-                    await ws.send(json.dumps({"type": "your_turn", "msg": f"旅游模式：当前位置 {tour_data['position']}/11，请掷骰子(1-3步)前进"}, ensure_ascii=False))
+                websocket = get_websocket_by_name(room, name)
+                if websocket:
+                    await websocket.send(json.dumps({"type": "your_turn", "msg": f"旅游模式：当前位置 {tour_data['position']}/11，请掷骰子(1-3步)前进"}, ensure_ascii=False))
                 await broadcast_room_state(room)
                 return
             
             await broadcast_to_room(room, f"[回合] 现在轮到 {name} 的回合")
-            ws = get_ws_by_name(room, name)
+            websocket = get_websocket_by_name(room, name)
             
-            if player.get("auto_turn", False) or player.get("disconnected", False) or not ws:
+            if player.get("auto_turn", False) or player.get("disconnected", False) or not websocket:
                 await broadcast_to_room(room, f"[托管] {name} 处于托管状态，自动操作")
                 await auto_roll_and_move(room, name)
                 return
             
-            if ws and not player.get("disconnected"):
-                await ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
+            if websocket and not player.get("disconnected"):
+                await websocket.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
             await broadcast_room_state(room)
             return
     
@@ -906,14 +908,14 @@ async def next_turn(room):
     await broadcast_to_room(room, "[系统] 🎮 游戏结束，可以开始新的一局！")
     await broadcast_room_state(room)
 
-async def handle_message(room, ws, name, data):
+async def handle_message(room, websocket, name, data):
     msg = data.get("action", "").strip()
     player = room.game_state["players"].get(name)
     if not player:
         return
     
     if player.get("spectator", False) and msg not in ("/chat", "/emoji", "/spectate", "/auto", "/map"):
-        await ws.send(json.dumps({"type": "log", "msg": "[提示] 观战模式不能执行游戏操作"}, ensure_ascii=False))
+        await websocket.send(json.dumps({"type": "log", "msg": "[提示] 观战模式不能执行游戏操作"}, ensure_ascii=False))
         return
     
     if msg.startswith("/chat "):
@@ -936,10 +938,10 @@ async def handle_message(room, ws, name, data):
     
     if msg == "/auto" or msg == "auto":
         if not room.started:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 游戏开始后才能设置托管"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 游戏开始后才能设置托管"}, ensure_ascii=False))
             return
         if player.get("spectator", False):
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 观战者不能设置托管"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 观战者不能设置托管"}, ensure_ascii=False))
             return
         
         player["auto_turn"] = not player.get("auto_turn", False)
@@ -957,13 +959,13 @@ async def handle_message(room, ws, name, data):
             target_name = msg[6:].strip()
             if target_name in room.game_state["players"]:
                 if target_name == name:
-                    await ws.send(json.dumps({"type": "log", "msg": "[提示] 不能踢出自己"}, ensure_ascii=False))
+                    await websocket.send(json.dumps({"type": "log", "msg": "[提示] 不能踢出自己"}, ensure_ascii=False))
                 else:
-                    target_ws = room.players.get(target_name)
-                    if target_ws:
+                    target_websocket = room.players.get(target_name)
+                    if target_websocket:
                         try:
-                            await target_ws.send(json.dumps({"type": "log", "msg": "[系统] 你已被房主踢出房间"}, ensure_ascii=False))
-                            await target_ws.close()
+                            await target_websocket.send(json.dumps({"type": "log", "msg": "[系统] 你已被房主踢出房间"}, ensure_ascii=False))
+                            await target_websocket.close()
                         except:
                             pass
 
@@ -975,16 +977,16 @@ async def handle_message(room, ws, name, data):
                     await broadcast_to_room(room, f"[系统] {target_name} 被房主 {name} 踢出房间")
                     await broadcast_room_state(room)
             else:
-                await ws.send(json.dumps({"type": "log", "msg": f"[提示] 玩家 {target_name} 不存在"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": f"[提示] 玩家 {target_name} 不存在"}, ensure_ascii=False))
         elif room.started:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 游戏开始后不能踢人"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 游戏开始后不能踢人"}, ensure_ascii=False))
         else:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以踢人"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以踢人"}, ensure_ascii=False))
         return
     
     if msg == "/players":
         players_list = list(room.game_state["players"].keys())
-        await ws.send(json.dumps({"type": "players", "players": players_list, "owner": room.owner}, ensure_ascii=False))
+        await websocket.send(json.dumps({"type": "players", "players": players_list, "owner": room.owner}, ensure_ascii=False))
         return
 
     if msg.startswith("/map "):
@@ -995,11 +997,11 @@ async def handle_message(room, ws, name, data):
                 await broadcast_to_room(room, f"[系统] 房主将地图切换为【{map_name}】")
                 await broadcast_room_state(room)
             else:
-                await ws.send(json.dumps({"type": "log", "msg": f"[提示] 地图 {map_name} 不存在"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": f"[提示] 地图 {map_name} 不存在"}, ensure_ascii=False))
         elif name != room.owner:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以切换地图"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以切换地图"}, ensure_ascii=False))
         else:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 游戏进行中不能切换地图"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 游戏进行中不能切换地图"}, ensure_ascii=False))
         return
     
     if msg == "start":
@@ -1044,15 +1046,15 @@ async def handle_message(room, ws, name, data):
                 first = room.game_state["turn_order"][0]
                 await broadcast_to_room(room, f"[回合] 首先由 {first} 开始")
                 await broadcast_room_state(room)
-                first_ws = get_ws_by_name(room, first)
-                if first_ws:
-                    await first_ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
+                first_websocket = get_websocket_by_name(room, first)
+                if first_websocket:
+                    await first_websocket.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
             else:
-                await ws.send(json.dumps({"type": "log", "msg": "[提示] 至少需要2名真实玩家才能开始（观战者不计入）"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": "[提示] 至少需要2名真实玩家才能开始（观战者不计入）"}, ensure_ascii=False))
         elif name != room.owner:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以开始游戏"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 只有房主可以开始游戏"}, ensure_ascii=False))
         else:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 游戏已开始"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 游戏已开始"}, ensure_ascii=False))
         return
     
     if not room.started:
@@ -1100,9 +1102,9 @@ async def handle_message(room, ws, name, data):
                     player["properties"].append(cell["id"])
                 await broadcast_to_room(room, f"[购买] {name} 购买了 {cell['name']}，花费{cell['price']}元")
             else:
-                await ws.send(json.dumps({"type": "log", "msg": f"[提示] {name} 资金不足，无法购买 {cell['name']}"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": f"[提示] {name} 资金不足，无法购买 {cell['name']}"}, ensure_ascii=False))
         else:
-            await ws.send(json.dumps({"type": "log", "msg": f"[提示] {name} 放弃购买 {cell['name']}"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": f"[提示] {name} 放弃购买 {cell['name']}"}, ensure_ascii=False))
         
         player["waiting_buy"] = None
         player["waiting_buy_cell"] = None
@@ -1136,9 +1138,9 @@ async def handle_message(room, ws, name, data):
                 room.game_state["prop_levels"][prop_id] = level + 1
                 await broadcast_to_room(room, f"[升级] {name} 将{cell['name']}升级为{get_level_name(level + 1)}")
             else:
-                await ws.send(json.dumps({"type": "log", "msg": f"[提示] {name} 资金不足，无法升级"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": f"[提示] {name} 资金不足，无法升级"}, ensure_ascii=False))
         else:
-            await ws.send(json.dumps({"type": "log", "msg": f"[提示] {name} 放弃升级 {cell['name']}"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": f"[提示] {name} 放弃升级 {cell['name']}"}, ensure_ascii=False))
         
         player["waiting_upgrade"] = None
         player["waiting_upgrade_cell"] = None
@@ -1153,7 +1155,7 @@ async def handle_message(room, ws, name, data):
     if msg == "roll":
         current_name = room.game_state["turn_order"][room.game_state["current_turn"]]
         if name != current_name:
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 还没轮到你"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 还没轮到你"}, ensure_ascii=False))
             return
         
         if room.game_state["tour_mode"].get(name, {}).get("active", False):
@@ -1173,9 +1175,9 @@ async def handle_message(room, ws, name, data):
                 "tour_old_pos": tour_data["position"],
                 "tour_new_pos": new_pos
             }, ensure_ascii=False)
-            for ws_client in room.players.values():
+            for websocket_client in room.players.values():
                 try:
-                    await ws_client.send(dice_data)
+                    await websocket_client.send(dice_data)
                 except:
                     pass
             
@@ -1207,7 +1209,7 @@ async def handle_message(room, ws, name, data):
             "passed_start": passed_start
         }
 
-        await ws.send(json.dumps({
+        await websocket.send(json.dumps({
             "type": "dice_result", 
             "dice": dice,
             "dice_gif": dice_gif,  # 添加这行
@@ -1220,7 +1222,6 @@ async def handle_message(room, ws, name, data):
         await broadcast_to_room(room, f"[骰子] {name} 掷出了 {dice} 点")
         return
         
-PORT = int(os.environ.get("PORT", 8765))  # Railway 会注入 PORT 环境变量
 # ========== WebSocket 连接处理 ==========
 async def handler(websocket):
     path = websocket.path  # 如果需要 path，从这里获取
@@ -1267,10 +1268,10 @@ async def handler(websocket):
             if room_num in rooms:
                 room = rooms[room_num]
             else:
-                await ws.send(json.dumps({"type": "log", "msg": "[错误] 房间不存在"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": "[错误] 房间不存在"}, ensure_ascii=False))
                 return
         except ValueError:
-            await ws.send(json.dumps({"type": "log", "msg": "[错误] 房间号格式错误"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[错误] 房间号格式错误"}, ensure_ascii=False))
             return
     else:
         room_num = generate_room_id()
@@ -1283,24 +1284,24 @@ async def handler(websocket):
         old_player = room.game_state["players"][name]
         
         if old_player.get("bankrupt", False):
-            await ws.send(json.dumps({"type": "log", "msg": "[系统] 你已破产，现在以观战模式重连"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[系统] 你已破产，现在以观战模式重连"}, ensure_ascii=False))
             old_player["spectator"] = True
         
         if name in room.players:
-            old_ws = room.players[name]
+            old_websocket = room.players[name]
             try:
-                await old_ws.close()
+                await old_websocket.close()
             except:
                 pass
         
-        room.players[name] = ws
+        room.players[name] = websocket
         old_player["disconnected"] = False
         if not room.started and not old_player.get("bankrupt", False):
             old_player["spectator"] = False
         
         await broadcast_to_room(room, f"[系统] {name} 重新连接")
         
-        await ws.send(json.dumps({
+        await websocket.send(json.dumps({
             "type": "room_info",
             "room_id": str(room.room_id),
             "is_owner": name == room.owner
@@ -1309,18 +1310,18 @@ async def handler(websocket):
         if room.started:
             player = room.game_state["players"][name]
             if player.get("bankrupt"):
-                await ws.send(json.dumps({"type": "log", "msg": "[系统] 你已破产，现在为观战模式"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": "[系统] 你已破产，现在为观战模式"}, ensure_ascii=False))
             
             if not player.get("bankrupt", False) and not player.get("spectator", False):
                 current_turn = room.game_state["turn_order"][room.game_state["current_turn"]]
                 if current_turn == name:
-                    await ws.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
+                    await websocket.send(json.dumps({"type": "your_turn", "msg": "轮到你了！请掷骰子"}, ensure_ascii=False))
         
         await broadcast_room_state(room)
     else:
         # 新玩家加入
         if room.started:
-            room.players[name] = ws
+            room.players[name] = websocket
             room.game_state["players"][name] = {
                 "money": 0,
                 "position": 0,
@@ -1333,15 +1334,15 @@ async def handler(websocket):
                 "custom_avatar": custom_avatar,
                 "auto_turn": False,
             }
-            await ws.send(json.dumps({
+            await websocket.send(json.dumps({
                 "type": "room_info",
                 "room_id": str(room.room_id),
                 "is_owner": False
             }, ensure_ascii=False))
-            await ws.send(json.dumps({"type": "log", "msg": "[系统] 游戏已开始，你以观战模式加入"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[系统] 游戏已开始，你以观战模式加入"}, ensure_ascii=False))
             await broadcast_room_state(room)
         else:
-            room.players[name] = ws
+            room.players[name] = websocket
             room.game_state["players"][name] = {
                 "money": 0,
                 "position": 0,
@@ -1355,7 +1356,7 @@ async def handler(websocket):
                 "auto_turn": False,
             }
             
-            await ws.send(json.dumps({
+            await websocket.send(json.dumps({
                 "type": "room_info",
                 "room_id": str(room.room_id),
                 "is_owner": name == room.owner
@@ -1365,20 +1366,20 @@ async def handler(websocket):
             await broadcast_to_room(room, f"[加入] {name} 加入了房间！当前人数：{real_count}")
             await broadcast_room_state(room)
             
-            await ws.send(json.dumps({"type": "log", "msg": f"[提示] 房间号：{room.room_id}，房主：{room.owner}"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": f"[提示] 房间号：{room.room_id}，房主：{room.owner}"}, ensure_ascii=False))
             if name == room.owner:
-                await ws.send(json.dumps({"type": "log", "msg": "[提示] 你是房主，可使用 /map [地图名] 切换地图，2人以上可 start 开始游戏"}, ensure_ascii=False))
-            await ws.send(json.dumps({"type": "log", "msg": "[提示] 输入 /auto 可开启/关闭托管模式（托管会自动掷骰子、自动购买/升级）"}, ensure_ascii=False))
+                await websocket.send(json.dumps({"type": "log", "msg": "[提示] 你是房主，可使用 /map [地图名] 切换地图，2人以上可 start 开始游戏"}, ensure_ascii=False))
+            await websocket.send(json.dumps({"type": "log", "msg": "[提示] 输入 /auto 可开启/关闭托管模式（托管会自动掷骰子、自动购买/升级）"}, ensure_ascii=False))
     
     if name == room.owner:
         players_list = list(room.game_state["players"].keys())
-        await ws.send(json.dumps({"type": "players", "players": players_list, "owner": room.owner}, ensure_ascii=False))
+        await websocket.send(json.dumps({"type": "players", "players": players_list, "owner": room.owner}, ensure_ascii=False))
     
     try:
-        async for raw_msg in ws:
+        async for raw_msg in websocket:
             try:
                 data = json.loads(raw_msg)
-                await handle_message(room, ws, name, data)
+                await handle_message(room, websocket, name, data)
             except Exception as e:
                 print(f"[消息错误] {e}")
     except websockets.exceptions.ConnectionClosed:
